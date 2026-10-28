@@ -51,10 +51,11 @@
     
     <div class="controls">
       <button id="btnListen" onclick="toggleListen()">Ativar Escuta 🎤</button>
-      <button onclick="mudarTela('agendaArea')" style="background:#0078ff; color:#fff;">Agendar Prova 📅</button>
     </div>
     
-    <div class="controls">
+    <!-- MODO FOCO: Botões agrupados para serem escondidos durante a escuta -->
+    <div id="botoesExtras" class="controls">
+      <button onclick="mudarTela('agendaArea')" style="background:#0078ff; color:#fff;">Agendar Prova 📅</button>
       <button onclick="mudarTela('cadastroArea')" style="background:#8a2be2; color:#fff;">Criar Conta 📝</button>
       <button onclick="mudarTela('loginAdminArea')" class="admin-btn">Área Admin ⚙️</button>
     </div>
@@ -114,8 +115,9 @@
   <script>
     // ==========================================
     // COLE AQUI O URL DA SUA NOVA IMPLEMENTAÇÃO
-    const API_URL = "https://script.google.com/macros/s/AKfycbyU6hIaGglthhe6-hgeRetciKTapep-0ik4oip-6eFI3Z7P-LaQqC1nBNHu4eN4fR_a/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbzwOn9JZe2c3KnPs4CwcgobOrtHr3kPRD13YZnCvbmvniaZrzLBdB6b7yugUzS8UEUe/exec"; 
     // ==========================================
+    const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; // Força permissões CORS do Apps Script
 
     let isListening = false;
     let recognition;
@@ -159,7 +161,6 @@
     // ---------------------------------
 
     function mudarTela(idTelaAlvo) {
-      // Atualizado para incluir a nova tela de cadastro
       document.querySelectorAll('#appArea, #cadastroArea, #agendaArea, #loginAdminArea, #painelAdminArea').forEach(el => el.classList.add('hidden'));
       document.getElementById(idTelaAlvo).classList.remove('hidden');
     }
@@ -177,7 +178,7 @@
 
       showModal("Aguarde", "A registar estudante...", "info");
 
-      fetch(`${API_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`)
+      fetch(`${API_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           showModal("Sucesso", dados.resultado, "alerta");
@@ -203,7 +204,7 @@
       let btn = document.querySelector("#loginAdminArea button");
       btn.textContent = "Validando...";
 
-      fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`)
+      fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           btn.textContent = "Acessar Painel";
@@ -223,7 +224,7 @@
 
     function carregarUsuarios() {
       document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
-      fetch(`${API_URL}?acao=listarUsuarios`)
+      fetch(`${API_URL}?acao=listarUsuarios`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           document.getElementById("listaUsuariosContainer").innerHTML = "<h3 style='margin-top:0;'>Usuários Cadastrados:</h3>" + dados.resultado;
@@ -233,7 +234,7 @@
     function excluirUsuario(email) {
       showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
         showModal("Aguarde", "Excluindo utilizador...", "info");
-        fetch(`${API_URL}?acao=excluirUsuario&email=${encodeURIComponent(email)}`)
+        fetch(`${API_URL}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions)
           .then(res => res.json())
           .then(dados => {
             showModal("Sucesso", dados.resultado, "alerta");
@@ -252,7 +253,7 @@
           return;
       }
 
-      fetch(`${API_URL}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`)
+      fetch(`${API_URL}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           showModal("Agenda", dados.resultado, "alerta");
@@ -286,13 +287,14 @@
           addMessage(pergunta, 'user-msg');
           falar("A processar...");
           
-          fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(pergunta)}`)
+          fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(pergunta)}`, fetchOptions)
             .then(res => res.json())
             .then(dados => {
               addMessage(dados.resultado, 'bot-msg');
               falar(dados.resultado); 
             }).catch(err => {
-              addMessage("Erro ao consultar a inteligência artificial.", 'bot-msg');
+              addMessage("Erro ao consultar a inteligência artificial. Verifique a conexão.", 'bot-msg');
+              console.error("Erro Fetch IA:", err);
             });
         }
       };
@@ -304,16 +306,20 @@
 
     function toggleListen() {
       let btn = document.getElementById("btnListen");
+      let botoesExtras = document.getElementById("botoesExtras"); // Nova variável para o Modo de Foco
+
       if (!isListening) {
         recognition.start();
         btn.textContent = "Escutando... 🔴";
         btn.classList.add("listening");
+        botoesExtras.classList.add("hidden"); // Oculta botões adicionais
         document.getElementById('statusEscuta').textContent = "Aguardando você falar...";
         isListening = true;
       } else {
         recognition.stop();
         btn.textContent = "Ativar Escuta 🎤";
         btn.classList.remove("listening");
+        botoesExtras.classList.remove("hidden"); // Restaura botões
         document.getElementById('statusEscuta').textContent = "";
         isListening = false;
       }

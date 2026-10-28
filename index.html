@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TUT-IA - Seu Tutor Inteligente</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .chat-box { flex: 1; overflow-y: auto; background: #1e1e1e; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 15px; max-width: 80%; }
+    .user-msg { background-color: #0078ff; align-self: flex-end; margin-left: auto; }
+    .bot-msg { background-color: #333333; align-self: flex-start; margin-right: auto; border-left: 4px solid #00e676; }
+    .controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    button { background: #00e676; color: #000; border: none; padding: 15px 20px; border-radius: 50px; font-weight: bold; font-size: 16px; cursor: pointer; width: 100%; max-width: 300px; box-shadow: 0 4px 6px rgba(0,230,118,0.3); transition: transform 0.1s; }
+    button:active { transform: scale(0.95); }
+    button.listening { background: #ff1744; color: #fff; animation: pulse 1.5s infinite; }
+    button.secondary { background: #555; color: #fff; }
+    button.admin-btn { background: #ff9800; color: #fff; padding: 10px; max-width: 150px; font-size: 14px; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    input { padding: 12px; border-radius: 8px; border: none; width: 100%; margin-bottom: 10px; background: #333; color: #fff; box-sizing: border-box; font-family: inherit; }
+    .hidden { display: none !important; }
+    #statusEscuta { text-align: center; color: #00e676; margin-top: 15px; font-style: italic; min-height: 20px; font-size: 14px; }
+    .admin-panel-content { background: #1e1e1e; padding: 15px; border-radius: 10px; color: #ddd; margin-bottom: 15px; max-height: 50vh; overflow-y: auto;}
+    ul { padding-left: 20px; margin: 0; }
+    li { margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px; list-style: none; }
+    
+    /* ESTILOS DO POPUP MODERNO */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(3px); }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    .modal-box { background: #1e1e1e; padding: 25px; border-radius: 20px; text-align: center; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); transform: translateY(-30px); transition: transform 0.3s ease; border: 1px solid #333; }
+    .modal-overlay.active .modal-box { transform: translateY(0); }
+    .modal-title { color: #00e676; margin-top: 0; font-size: 22px; margin-bottom: 10px;}
+    .modal-msg { color: #ccc; margin-bottom: 25px; font-size: 15px; line-height: 1.4; }
+    .modal-btns { display: flex; gap: 10px; justify-content: center; }
+    .modal-btns button { padding: 12px; font-size: 14px; border-radius: 10px; flex: 1; margin: 0; max-width: 140px; }
+    .modal-btn-cancel { background: #444; color: white; }
+    .modal-btn-confirm { background: #0078ff; color: white; }
+    .modal-btn-danger { background: #ff1744; color: white; }
+  </style>
+</head>
+<body>
+
+  <!-- TELA DE CHAT PRINCIPAL -->
+  <div id="appArea">
+    <h2 style="text-align:center; color: #00e676; margin-top: 0;">TUT-IA</h2>
+    <p style="text-align:center; font-size:12px; color:#aaa; margin-top:-10px;">Diga sua palavra de segurança seguida da pergunta.</p>
+    
+    <div class="chat-box" id="chatBox">
+      <div class="message bot-msg">Olá! Sou o TUT-IA. Toque no botão abaixo para ativar a escuta.</div>
+    </div>
+    
+    <div class="controls">
+      <button id="btnListen" onclick="toggleListen()">Ativar Escuta 🎤</button>
+      <button onclick="mudarTela('agendaArea')" style="background:#0078ff; color:#fff;">Agendar Prova 📅</button>
+    </div>
+    
+    <div class="controls">
+      <button onclick="mudarTela('loginAdminArea')" class="admin-btn">Área Admin ⚙️</button>
+    </div>
+
+    <div id="statusEscuta"></div>
+  </div>
+
+  <!-- TELA DE AGENDAR PROVA -->
+  <div id="agendaArea" class="hidden">
+    <h2 style="text-align:center; color: #0078ff;">Agendar Prova</h2>
+    <input type="text" id="provaNome" placeholder="Matéria (Ex: Matemática)">
+    <input type="datetime-local" id="provaData">
+    <input type="email" id="userEmail" placeholder="Seu e-mail">
+    <button onclick="agendarProva()">Salvar na Agenda</button>
+    <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
+  </div>
+
+  <!-- TELA DE LOGIN ADMIN -->
+  <div id="loginAdminArea" class="hidden">
+    <h2 style="text-align:center; color: #ff9800;">Acesso Restrito</h2>
+    <input type="text" id="adminUser" placeholder="Usuário Master">
+    <input type="password" id="adminPass" placeholder="Senha Master">
+    <button onclick="entrarAdmin()" style="background:#ff9800;">Acessar Painel</button>
+    <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
+  </div>
+
+  <!-- TELA DO PAINEL ADMIN -->
+  <div id="painelAdminArea" class="hidden">
+    <h2 style="text-align:center; color: #ff9800;">Painel de Controle</h2>
+    <div class="admin-panel-content" id="listaUsuariosContainer">Carregando utilizadores...</div>
+    <button onclick="mudarTela('appArea')" class="secondary">Sair do Painel</button>
+  </div>
+
+  <!-- POPUP MODERNO -->
+  <div id="customModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="modalTitle" class="modal-title">Aviso</h3>
+      <p id="modalMsg" class="modal-msg">Mensagem.</p>
+      <div class="modal-btns">
+        <button id="modalBtnCancel" class="modal-btn-cancel hidden" onclick="closeModal()">Cancelar</button>
+        <button id="modalBtnConfirm" class="modal-btn-confirm" onclick="closeModal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // COLE AQUI O URL DA SUA NOVA IMPLEMENTAÇÃO
+    const API_URL = "https://script.google.com/macros/s/AKfycbyDWCOQ7JOt0N173JfWebhLaU-nbwV8JODX3sUKdUWy9JZCA7AUY5vE5Lohzt8Brbaq/exec"; 
+    // ==========================================
+
+    let isListening = false;
+    let recognition;
+    const palavraSeguranca = "tutor"; 
+    let acaoConfirmacaoPendente = null; // Guarda a função do botão Confirmar do modal
+
+    // --- SISTEMA DE POPUP MODERNO ---
+    function showModal(titulo, mensagem, tipo, callbackConfirmar) {
+      document.getElementById('modalTitle').textContent = titulo;
+      document.getElementById('modalTitle').style.color = (tipo === 'erro' || tipo === 'deletar') ? '#ff1744' : '#00e676';
+      document.getElementById('modalMsg').textContent = mensagem;
+      
+      let btnCancel = document.getElementById('modalBtnCancel');
+      let btnConfirm = document.getElementById('modalBtnConfirm');
+
+      if (tipo === 'confirmacao' || tipo === 'deletar') {
+        btnCancel.classList.remove('hidden');
+        btnConfirm.textContent = "Confirmar";
+        btnConfirm.className = tipo === 'deletar' ? "modal-btn-danger" : "modal-btn-confirm";
+        acaoConfirmacaoPendente = callbackConfirmar;
+      } else {
+        btnCancel.classList.add('hidden');
+        btnConfirm.textContent = "OK";
+        btnConfirm.className = "modal-btn-confirm";
+        acaoConfirmacaoPendente = closeModal; 
+      }
+      
+      document.getElementById('customModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('customModal').classList.remove('active');
+    }
+
+    document.getElementById('modalBtnConfirm').addEventListener('click', function() {
+      if (typeof acaoConfirmacaoPendente === 'function') {
+        acaoConfirmacaoPendente();
+      }
+      closeModal();
+    });
+    // ---------------------------------
+
+    function mudarTela(idTelaAlvo) {
+      document.querySelectorAll('#appArea, #agendaArea, #loginAdminArea, #painelAdminArea').forEach(el => el.classList.add('hidden'));
+      document.getElementById(idTelaAlvo).classList.remove('hidden');
+    }
+
+    function entrarAdmin() {
+      let user = document.getElementById("adminUser").value;
+      let pass = document.getElementById("adminPass").value;
+      
+      if(!user || !pass) {
+        showModal("Atenção", "Preencha todos os campos!", "alerta");
+        return;
+      }
+
+      let btn = document.querySelector("#loginAdminArea button");
+      btn.textContent = "Validando...";
+
+      // NOVO: Pedido Fetch para a API
+      fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`)
+        .then(res => res.json())
+        .then(dados => {
+          btn.textContent = "Acessar Painel";
+          if(dados.resultado === true) {
+            mudarTela('painelAdminArea');
+            carregarUsuarios(); 
+            document.getElementById("adminUser").value = "";
+            document.getElementById("adminPass").value = "";
+          } else {
+            showModal("Erro de Acesso", "Usuário ou senha incorretos!", "erro");
+          }
+        }).catch(err => {
+          btn.textContent = "Acessar Painel";
+          showModal("Erro", "Falha de comunicação com o servidor.", "erro");
+        });
+    }
+
+    function carregarUsuarios() {
+      document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
+      fetch(`${API_URL}?acao=listarUsuarios`)
+        .then(res => res.json())
+        .then(dados => {
+          document.getElementById("listaUsuariosContainer").innerHTML = "<h3 style='margin-top:0;'>Usuários Cadastrados:</h3>" + dados.resultado;
+        });
+    }
+
+    function excluirUsuario(email) {
+      showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
+        showModal("Aguarde", "Excluindo utilizador...", "info");
+        fetch(`${API_URL}?acao=excluirUsuario&email=${encodeURIComponent(email)}`)
+          .then(res => res.json())
+          .then(dados => {
+            showModal("Sucesso", dados.resultado, "alerta");
+            carregarUsuarios(); 
+          });
+      });
+    }
+
+    function agendarProva() {
+      let nome = document.getElementById("provaNome").value;
+      let data = document.getElementById("provaData").value;
+      let email = document.getElementById("userEmail").value;
+      
+      if(!nome || !data || !email) {
+          showModal("Atenção", "Preencha todos os dados da prova.", "alerta");
+          return;
+      }
+
+      fetch(`${API_URL}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`)
+        .then(res => res.json())
+        .then(dados => {
+          showModal("Agenda", dados.resultado, "alerta");
+          mudarTela('appArea');
+          document.getElementById("provaNome").value = "";
+          document.getElementById("provaData").value = "";
+          document.getElementById("userEmail").value = "";
+        });
+    }
+
+    // Configuração de Reconhecimento de Voz
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.lang = 'pt-BR';
+      recognition.interimResults = true; 
+
+      recognition.onresult = function(event) {
+        let textoEmTempoReal = "";
+        let isFinal = false;
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          textoEmTempoReal += event.results[i][0].transcript.toLowerCase();
+          if (event.results[i].isFinal) { isFinal = true; }
+        }
+
+        document.getElementById('statusEscuta').textContent = 'A ouvir: "' + textoEmTempoReal + '"';
+        
+        if (isFinal && textoEmTempoReal.includes(palavraSeguranca)) {
+          let pergunta = textoEmTempoReal.replace(palavraSeguranca, "").trim();
+          document.getElementById('statusEscuta').textContent = ""; 
+          addMessage(pergunta, 'user-msg');
+          falar("A processar...");
+          
+          // NOVO: Pedido Fetch para a IA
+          fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(pergunta)}`)
+            .then(res => res.json())
+            .then(dados => {
+              addMessage(dados.resultado, 'bot-msg');
+              falar(dados.resultado); 
+            }).catch(err => {
+              addMessage("Erro ao consultar a inteligência artificial.", 'bot-msg');
+            });
+        }
+      };
+      recognition.onerror = function(event) { document.getElementById('statusEscuta').textContent = "Erro: " + event.error; };
+      recognition.onend = function() { if (isListening) recognition.start(); };
+    } else {
+        showModal("Aviso de Compatibilidade", "Seu navegador não suporta reconhecimento de voz. Use o Chrome ou Safari.", "erro");
+    }
+
+    function toggleListen() {
+      let btn = document.getElementById("btnListen");
+      if (!isListening) {
+        recognition.start();
+        btn.textContent = "Escutando... 🔴";
+        btn.classList.add("listening");
+        document.getElementById('statusEscuta').textContent = "Aguardando você falar...";
+        isListening = true;
+      } else {
+        recognition.stop();
+        btn.textContent = "Ativar Escuta 🎤";
+        btn.classList.remove("listening");
+        document.getElementById('statusEscuta').textContent = "";
+        isListening = false;
+      }
+    }
+
+    function falar(texto) {
+      window.speechSynthesis.cancel(); // Para falas anteriores
+      let synth = window.speechSynthesis;
+      let utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = 'pt-BR';
+      synth.speak(utterance);
+    }
+
+    function addMessage(texto, classe) {
+      if(!texto) return;
+      let chat = document.getElementById("chatBox");
+      let msgDiv = document.createElement("div");
+      msgDiv.className = "message " + classe;
+      msgDiv.textContent = texto;
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
+</body>
+</html>

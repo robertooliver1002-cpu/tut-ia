@@ -55,10 +55,22 @@
     </div>
     
     <div class="controls">
+      <button onclick="mudarTela('cadastroArea')" style="background:#8a2be2; color:#fff;">Criar Conta 📝</button>
       <button onclick="mudarTela('loginAdminArea')" class="admin-btn">Área Admin ⚙️</button>
     </div>
 
     <div id="statusEscuta"></div>
+  </div>
+
+  <!-- TELA DE REGISTO DE ESTUDANTE -->
+  <div id="cadastroArea" class="hidden">
+    <h2 style="text-align:center; color: #00e676;">Novo Cadastro</h2>
+    <input type="text" id="cadNome" placeholder="Seu Nome">
+    <input type="email" id="cadEmail" placeholder="Seu E-mail">
+    <input type="password" id="cadSenha" placeholder="Crie uma Senha">
+    <input type="text" id="cadPalavra" placeholder="Palavra de Segurança (ex: Tutor)">
+    <button onclick="realizarCadastro()">Criar Conta</button>
+    <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
   </div>
 
   <!-- TELA DE AGENDAR PROVA -->
@@ -108,7 +120,7 @@
     let isListening = false;
     let recognition;
     const palavraSeguranca = "tutor"; 
-    let acaoConfirmacaoPendente = null; // Guarda a função do botão Confirmar do modal
+    let acaoConfirmacaoPendente = null; 
 
     // --- SISTEMA DE POPUP MODERNO ---
     function showModal(titulo, mensagem, tipo, callbackConfirmar) {
@@ -147,8 +159,36 @@
     // ---------------------------------
 
     function mudarTela(idTelaAlvo) {
-      document.querySelectorAll('#appArea, #agendaArea, #loginAdminArea, #painelAdminArea').forEach(el => el.classList.add('hidden'));
+      // Atualizado para incluir a nova tela de cadastro
+      document.querySelectorAll('#appArea, #cadastroArea, #agendaArea, #loginAdminArea, #painelAdminArea').forEach(el => el.classList.add('hidden'));
       document.getElementById(idTelaAlvo).classList.remove('hidden');
+    }
+
+    function realizarCadastro() {
+      let nome = document.getElementById("cadNome").value;
+      let email = document.getElementById("cadEmail").value;
+      let senha = document.getElementById("cadSenha").value;
+      let palavra = document.getElementById("cadPalavra").value;
+
+      if(!nome || !email || !senha || !palavra) {
+        showModal("Atenção", "Preencha todos os campos!", "alerta");
+        return;
+      }
+
+      showModal("Aguarde", "A registar estudante...", "info");
+
+      fetch(`${API_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`)
+        .then(res => res.json())
+        .then(dados => {
+          showModal("Sucesso", dados.resultado, "alerta");
+          document.getElementById("cadNome").value = "";
+          document.getElementById("cadEmail").value = "";
+          document.getElementById("cadSenha").value = "";
+          document.getElementById("cadPalavra").value = "";
+          mudarTela('appArea');
+        }).catch(err => {
+          showModal("Erro", "Falha de comunicação com o servidor.", "erro");
+        });
     }
 
     function entrarAdmin() {
@@ -163,7 +203,6 @@
       let btn = document.querySelector("#loginAdminArea button");
       btn.textContent = "Validando...";
 
-      // NOVO: Pedido Fetch para a API
       fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`)
         .then(res => res.json())
         .then(dados => {
@@ -247,7 +286,6 @@
           addMessage(pergunta, 'user-msg');
           falar("A processar...");
           
-          // NOVO: Pedido Fetch para a IA
           fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(pergunta)}`)
             .then(res => res.json())
             .then(dados => {
@@ -282,7 +320,7 @@
     }
 
     function falar(texto) {
-      window.speechSynthesis.cancel(); // Para falas anteriores
+      window.speechSynthesis.cancel(); 
       let synth = window.speechSynthesis;
       let utterance = new SpeechSynthesisUtterance(texto);
       utterance.lang = 'pt-BR';

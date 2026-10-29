@@ -68,7 +68,7 @@
   <!-- BARRA DE CONFIGURAÇÃO DE IMPLANTAÇÃO (Salva no dispositivo) -->
   <div class="config-bar">
     <span style="color:#aaa;">API Atual:</span>
-    <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycbwVN19-DQ5GSQEnn-L0yg02tjKagCkvhZRqFhOxk7w8UaEHleeYHJahLoJ8fgIZGIt3/exec">
+    <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycbzSh4OGw2kdrzU3pmNuZRbftDqr6ZzdoBFxCsXCizbXSKI5DxD8nJKd6wkmZb42nEIi/exec">
     <button onclick="salvarNovoEndpoint()">Salvar URL</button>
   </div>
 
@@ -171,8 +171,8 @@
 
   <script>
     // ==========================================
-    // ENDPOINT PADRÃO PRESERVADO
-    const ENDPOINT_PADRAO = "https://script.google.com/macros/s/AKfycbyuLjilSjSLTjjZ_4tJtT21_XKCQ0DZ14dB6UKnHwMxuW0trA-e_VcGkFk45-_o6a8q/exec";
+    // ENDPOINT PADRÃO PRESERVADO (Com suporte a atualização visual)
+    const ENDPOINT_PADRAO = "https://script.google.com/macros/s/AKfycbzLViQh3iG57_rMm5TbJ7Wbh3ALQ_dwxDQ7L-Y2UGkdwd7WyZuoHpnZb0oQemMfMSU/exec";
     
     function obterApiUrl() {
       return localStorage.getItem("tut_ia_endpoint") || ENDPOINT_PADRAO;
@@ -340,7 +340,7 @@
       if (event.key === "Enter") enviarPerguntaDigitada();
     }
 
-    // --- LÓGICA DE VOZ (Buffer contínuo + pausa enquanto a IA fala) ---
+    // --- LÓGICA DE VOZ (Buffer contínuo + Correção de Duplicação Mobile) ---
     let timeoutFalar; 
     let textoAcumuladoCompleto = ""; 
 
@@ -356,22 +356,28 @@
         if (isSpeaking) return;
 
         let textoSessaoAtual = "";
+        let textoFinalSessao = "";
+
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
-            textoAcumuladoCompleto += " " + event.results[i][0].transcript;
+            textoFinalSessao += " " + event.results[i][0].transcript;
           } else {
-            textoSessaoAtual += event.results[i][0].transcript;
+            // CORREÇÃO PARA MOBILE: Usar "=" em vez de "+=" para evitar a 
+            // repetição do histórico da frase enviada pelo Android/iOS
+            textoSessaoAtual = " " + event.results[i][0].transcript;
           }
         }
 
-        let textoVisivel = (textoAcumuladoCompleto + " " + textoSessaoAtual).trim();
+        textoAcumuladoCompleto += textoFinalSessao;
+
+        let textoVisivel = (textoAcumuladoCompleto + textoSessaoAtual).trim();
         document.getElementById('statusEscuta').textContent = 'A ouvir: "' + textoVisivel.toLowerCase() + '"';
         
         clearTimeout(timeoutFalar);
         
         // 4,5s de tolerância para enunciados longos e respiração
         timeoutFalar = setTimeout(() => {
-          let fraseFinal = (textoAcumuladoCompleto + " " + textoSessaoAtual).trim();
+          let fraseFinal = (textoAcumuladoCompleto + textoSessaoAtual).trim();
           if (fraseFinal !== "" && !isSpeaking) {
             document.getElementById('statusEscuta').textContent = ""; 
             enviarParaIA(fraseFinal); 

@@ -160,7 +160,7 @@
   <script>
     // ==========================================
     // COLE AQUI O URL DA SUA IMPLEMENTAÇÃO ATUAL
-    const API_URL = "https://script.google.com/macros/s/AKfycbxCARL3P-At2QhjZ6iMT9UXsvknkxc_zpiXr5gOV8mXhAIiCGp_iBbDPwObwKnWRBY-/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbzvjMb32T_k_sOH9N_TGUYrkHGfCND0zSqhSN2isRZ1b27BWrf2NykMA44xs90sQlg/exec"; 
     // ==========================================
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 
@@ -286,31 +286,40 @@
 
     // --- NOVA LÓGICA DE VOZ (Envio por atraso de 3 segundos) ---
     let timeoutFalar; 
+    let textoAcumuladoCompleto = ""; // Guarda toda a leitura contínua de enunciados longos
 
     if ('webkitSpeechRecognition' in window) {
       recognition = new webkitSpeechRecognition();
       recognition.continuous = true;
-      recognition.lang = 'pt-BR';
       recognition.interimResults = true; 
+      recognition.lang = 'pt-BR';
 
       recognition.onresult = function(event) {
-        let textoEmTempoReal = "";
+        let textoSessaoAtual = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          textoEmTempoReal += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            textoAcumuladoCompleto += " " + event.results[i][0].transcript;
+          } else {
+            textoSessaoAtual += event.results[i][0].transcript;
+          }
         }
 
-        document.getElementById('statusEscuta').textContent = 'A ouvir: "' + textoEmTempoReal.toLowerCase() + '"';
+        let textoVisivel = (textoAcumuladoCompleto + " " + textoSessaoAtual).trim();
+        document.getElementById('statusEscuta').textContent = 'A ouvir: "' + textoVisivel.toLowerCase() + '"';
         
+        // Cancela o disparo enquanto continuar falando
         clearTimeout(timeoutFalar);
         
+        // 4,5 segundos de silêncio absoluto para permitir pausas de vírgula e respiração
         timeoutFalar = setTimeout(() => {
-          let frase = textoEmTempoReal.trim();
-          if (frase !== "") {
+          let fraseFinal = (textoAcumuladoCompleto + " " + textoSessaoAtual).trim();
+          if (fraseFinal !== "") {
             document.getElementById('statusEscuta').textContent = ""; 
-            enviarParaIA(frase); 
+            enviarParaIA(fraseFinal); 
+            textoAcumuladoCompleto = ""; // Limpa o buffer para o próximo enunciado
             recognition.stop(); 
           }
-        }, 3000);
+        }, 4500);
       };
       
       recognition.onerror = function(event) { 
@@ -320,7 +329,9 @@
       };
       
       recognition.onend = function() { 
-        if (isListening) recognition.start(); 
+        if (isListening) {
+          try { recognition.start(); } catch(e) {}
+        }
       };
     } else {
         showModal("Aviso", "Seu navegador não suporta voz. Use a caixa de texto.", "erro");
@@ -333,17 +344,19 @@
       let btnEnviar = document.querySelector(".btn-enviar");
 
       if (!isListening) {
+        textoAcumuladoCompleto = "";
         recognition.start();
         btn.innerHTML = "🔴";
         btn.classList.add("listening");
         botoesExtras.classList.add("hidden"); 
         inputTexto.disabled = true; 
         btnEnviar.disabled = true;
-        document.getElementById('statusEscuta').textContent = "Pode falar, a escutar...";
+        document.getElementById('statusEscuta').textContent = "Pode ler o enunciado completo, a escutar...";
         isListening = true;
       } else {
-        recognition.stop();
         clearTimeout(timeoutFalar);
+        textoAcumuladoCompleto = "";
+        recognition.stop();
         btn.innerHTML = "🎤";
         btn.classList.remove("listening");
         botoesExtras.classList.remove("hidden"); 

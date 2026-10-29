@@ -152,7 +152,7 @@
   <script>
     // ==========================================
     // COLE AQUI O URL DA SUA NOVA IMPLEMENTAÇÃO
-    const API_URL = "https://script.google.com/macros/s/AKfycbx2yyuGcqbXuIzIzYtXGM5OMV99oSwXSQ-h-SYNQ0IQGSidrqhKvJqPR-Gwxqtg3NUx/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbyXUwHODPATI5A2kah1yNdlw60yKVtlfgMCFeSokAjpGgffGN0cZXRCCgmsg4GXyuMZ/exec"; 
     // ==========================================
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 
@@ -223,14 +223,21 @@
         .then(dados => {
           if(dados.resultado.sucesso) {
             closeModal();
+            
+            // CORREÇÃO: Transforma a palavra em String antes de converter, evitando travamentos
+            let palavraSegura = String(dados.resultado.palavra || "tutor").toLowerCase();
+            
             // Salva dados no LocalStorage para não pedir login a toda a hora
-            alunoLogado = { email: email, nome: dados.resultado.nome, palavra: dados.resultado.palavra.toLowerCase() };
+            alunoLogado = { email: email, nome: dados.resultado.nome, palavra: palavraSegura };
             localStorage.setItem("tut_ia_aluno", JSON.stringify(alunoLogado));
             prepararAreaAluno();
           } else {
             showModal("Acesso Negado", dados.resultado.mensagem, "erro");
           }
-        }).catch(err => showModal("Erro", "Falha de comunicação com o servidor.", "erro"));
+        }).catch(err => {
+          console.error("Erro detalhado no console:", err);
+          showModal("Erro", "Ocorreu um problema ao processar o seu login.", "erro");
+        });
     }
 
     function prepararAreaAluno() {

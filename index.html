@@ -52,7 +52,8 @@
   <!-- TELA DE LOGIN DO ALUNO (Inicial) -->
   <div id="loginAlunoArea">
     <h2 style="text-align:center; color: #00e676;">Entrar no TUT-IA</h2>
-    <p style="text-align:center; color: #aaa; font-size: 14px;">Aceda aos seus estudos.</p>
+    <!-- Indicador de versão para garantir que o cache foi limpo -->
+    <p style="text-align:center; color: #aaa; font-size: 14px;">Aceda aos seus estudos. (v2.0)</p>
     <div style="max-width: 400px; margin: 0 auto;">
       <input type="email" id="loginEmail" placeholder="Seu E-mail de Registo">
       <input type="password" id="loginSenha" placeholder="Sua Senha">
@@ -116,7 +117,7 @@
     <h2 style="text-align:center; color: #0078ff;">Agendar Prova</h2>
     <input type="text" id="provaNome" placeholder="Matéria (Ex: Matemática)">
     <input type="datetime-local" id="provaData">
-    <input type="email" id="userEmail" placeholder="Seu e-mail" id="agendaEmail">
+    <input type="email" id="userEmail" placeholder="Seu e-mail">
     <button onclick="agendarProva()">Salvar na Agenda</button>
     <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
   </div>
@@ -152,7 +153,7 @@
   <script>
     // ==========================================
     // COLE AQUI O URL DA SUA NOVA IMPLEMENTAÇÃO
-    const API_URL = "https://script.google.com/macros/s/AKfycbyXUwHODPATI5A2kah1yNdlw60yKVtlfgMCFeSokAjpGgffGN0cZXRCCgmsg4GXyuMZ/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbzLViQh3iG57_rMm5TbJ7Wbh3ALQ_dwxDQ7L-Y2UGkdwd7WyZuoHpnZb0oQemMfMSU/exec"; 
     // ==========================================
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 

@@ -8,11 +8,6 @@
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     
-    /* Configuração rápida de Endpoint */
-    .config-bar { background: #1a1a1a; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; font-size: 12px; flex-shrink: 0; border: 1px solid #333; }
-    .config-bar input { margin: 0; padding: 6px 10px; font-size: 12px; flex: 1; background: #252525; border: 1px solid #444; color: #00e676; border-radius: 6px; }
-    .config-bar button { width: auto; max-width: none; padding: 6px 14px; font-size: 12px; border-radius: 6px; background: #0078ff; color: #fff; box-shadow: none; }
-
     /* Contentor do Chat: Trava a altura para forçar a barra de rolagem */
     #appArea:not(.hidden) { display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; overflow: hidden; }
     .chat-box { flex: 1; overflow-y: auto; background: #1e1e1e; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); min-height: 0; scroll-behavior: smooth; }
@@ -64,13 +59,6 @@
   </style>
 </head>
 <body>
-
-  <!-- BARRA DE CONFIGURAÇÃO DE IMPLANTAÇÃO (Salva no dispositivo) -->
-  <div class="config-bar">
-    <span style="color:#aaa;">API Atual:</span>
-    <input type="text" id="campoApiUrl" placeholder="Cole o URL da implantação aqui...">
-    <button onclick="salvarNovoEndpoint()">Salvar URL</button>
-  </div>
 
   <!-- TELA DE LOGIN DO ALUNO (Inicial) -->
   <div id="loginAlunoArea">
@@ -171,20 +159,9 @@
 
   <script>
     // ==========================================
-    // ENDPOINT PADRÃO PRESERVADO (Com suporte a atualização visual)
-    const ENDPOINT_PADRAO = "https://script.google.com/macros/s/AKfycbzLViQh3iG57_rMm5TbJ7Wbh3ALQ_dwxDQ7L-Y2UGkdwd7WyZuoHpnZb0oQemMfMSU/exec";
-    
-    function obterApiUrl() {
-      return localStorage.getItem("tut_ia_endpoint") || ENDPOINT_PADRAO;
-    }
-
-    function salvarNovoEndpoint() {
-      let valor = document.getElementById("campoApiUrl").value.trim();
-      if (!valor) valor = ENDPOINT_PADRAO;
-      localStorage.setItem("tut_ia_endpoint", valor);
-      showModal("Configuração", "Endereço da API atualizado com sucesso!", "info");
-    }
-
+    // ENDPOINT ATUAL FIXO DA SUA IMPLANTAÇÃO
+    const API_URL = "https://script.google.com/macros/s/AKfycbyuLjilSjSLTjjZ_4tJtT21_XKCQ0DZ14dB6UKnHwMxuW0trA-e_VcGkFk45-_o6a8q/exec";
+    // ==========================================
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 
     let isListening = false;
@@ -242,8 +219,6 @@
     }
 
     window.onload = function() {
-      document.getElementById("campoApiUrl").value = obterApiUrl();
-
       let guardado = localStorage.getItem("tut_ia_aluno");
       if(guardado) {
         alunoLogado = JSON.parse(guardado);
@@ -262,7 +237,7 @@
 
       showModal("Aguarde", "A verificar dados...", "info");
 
-      fetch(`${obterApiUrl()}?acao=validarLogin&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`, fetchOptions)
+      fetch(`${API_URL}?acao=validarLogin&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           if(dados.resultado.sucesso) {
@@ -306,7 +281,7 @@
       
       document.getElementById("textoPergunta").value = ""; 
       
-      fetch(`${obterApiUrl()}?acao=perguntar&pergunta=${encodeURIComponent(perguntaTexto)}&materia=${encodeURIComponent(materia)}`, fetchOptions)
+      fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(perguntaTexto)}&materia=${encodeURIComponent(materia)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           let resposta = dados.resultado || "";
@@ -438,11 +413,14 @@
       utterance.lang = 'pt-BR';
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
-      // Seleção forçada de voz PT-BR no iOS
+      // Localização de voz em português
       let vozes = window.speechSynthesis.getVoices();
-      let vozPt = vozes.find(v => v.lang === 'pt-BR' || v.lang === 'pt_BR');
-      if (vozPt) utterance.voice = vozPt;
+      if (vozes && vozes.length > 0) {
+        let vozPt = vozes.find(v => v.lang === 'pt-BR' || v.lang === 'pt_BR' || v.lang.startsWith('pt'));
+        if (vozPt) utterance.voice = vozPt;
+      }
 
       utterance.onstart = function() {
         isSpeaking = true;
@@ -500,7 +478,7 @@
       if(!nome || !email || !senha || !palavra) { showModal("Atenção", "Preencha todos os campos!", "alerta"); return; }
       showModal("Aguarde", "A registar estudante...", "info");
 
-      fetch(`${obterApiUrl()}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`, fetchOptions)
+      fetch(`${API_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           showModal("Sucesso", dados.resultado, "alerta");
@@ -514,7 +492,7 @@
       if(!user || !pass) { showModal("Atenção", "Preencha todos os campos!", "alerta"); return; }
       
       document.querySelector("#loginAdminArea button").textContent = "Validando...";
-      fetch(`${obterApiUrl()}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`, fetchOptions)
+      fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           document.querySelector("#loginAdminArea button").textContent = "Acessar Painel";
@@ -525,13 +503,13 @@
 
     function carregarUsuarios() {
       document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
-      fetch(`${obterApiUrl()}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document.getElementById("listaUsuariosContainer").innerHTML = "<h3>Usuários Cadastrados:</h3>" + dados.resultado; });
+      fetch(`${API_URL}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document.getElementById("listaUsuariosContainer").innerHTML = "<h3>Usuários Cadastrados:</h3>" + dados.resultado; });
     }
 
     function excluirUsuario(email) {
       showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
         showModal("Aguarde", "Excluindo utilizador...", "info");
-        fetch(`${obterApiUrl()}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions).then(res => res.json()).then(dados => { showModal("Sucesso", dados.resultado, "alerta"); carregarUsuarios(); });
+        fetch(`${API_URL}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions).then(res => res.json()).then(dados => { showModal("Sucesso", dados.resultado, "alerta"); carregarUsuarios(); });
       });
     }
 
@@ -541,7 +519,7 @@
       let email = document.getElementById("userEmail").value;
       if(!nome || !data || !email) { showModal("Atenção", "Preencha todos os dados da prova.", "alerta"); return; }
 
-      fetch(`${obterApiUrl()}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
+      fetch(`${API_URL}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           showModal("Agenda", dados.resultado, "alerta");

@@ -5,9 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TUT-IA - Seu Tutor Inteligente</title>
   <style>
+    * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    .chat-box { flex: 1; overflow-y: auto; background: #1e1e1e; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-    .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 15px; max-width: 80%; }
+    
+    /* Contentor do Chat: Trava a altura para forçar a barra de rolagem */
+    #appArea:not(.hidden) { display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; overflow: hidden; }
+    .chat-box { flex: 1; overflow-y: auto; background: #1e1e1e; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); min-height: 0; scroll-behavior: smooth; }
+    
+    /* Estilização da Barra de Rolagem */
+    .chat-box::-webkit-scrollbar { width: 8px; }
+    .chat-box::-webkit-scrollbar-track { background: #181818; border-radius: 10px; }
+    .chat-box::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    .chat-box::-webkit-scrollbar-thumb:hover { background: #00e676; }
+
+    .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 15px; max-width: 80%; word-wrap: break-word; }
     .user-msg { background-color: #0078ff; align-self: flex-end; margin-left: auto; }
     .bot-msg { background-color: #333333; align-self: flex-start; margin-right: auto; border-left: 4px solid #00e676; }
     .controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -19,7 +30,7 @@
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     input { padding: 12px; border-radius: 8px; border: none; width: 100%; margin-bottom: 10px; background: #333; color: #fff; box-sizing: border-box; font-family: inherit; }
     .hidden { display: none !important; }
-    #statusEscuta { text-align: center; color: #00e676; margin-top: 15px; font-style: italic; min-height: 20px; font-size: 14px; }
+    #statusEscuta { text-align: center; color: #00e676; margin-top: 10px; font-style: italic; min-height: 20px; font-size: 14px; }
     .admin-panel-content { background: #1e1e1e; padding: 15px; border-radius: 10px; color: #ddd; margin-bottom: 15px; max-height: 50vh; overflow-y: auto;}
     ul { padding-left: 20px; margin: 0; }
     li { margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px; list-style: none; }
@@ -43,7 +54,7 @@
     .input-row button.btn-enviar { width: auto; background: #0078ff; color: #fff; padding: 12px 20px; border-radius: 8px; }
     .input-row button#btnListen { width: auto; padding: 12px 20px; border-radius: 8px; }
     
-    .cabecalho-aluno { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
+    .cabecalho-aluno { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 15px; border-radius: 10px; margin-bottom: 10px; font-size: 14px; flex-shrink: 0; }
     .btn-sair { background: #ff1744; color: white; padding: 5px 10px; font-size: 12px; border-radius: 5px; width: auto; max-width: none;}
   </style>
 </head>
@@ -71,11 +82,11 @@
       <button class="btn-sair" onclick="fazerLogout()">Sair</button>
     </div>
     
-    <h2 style="text-align:center; color: #00e676; margin-top: 0;">TUT-IA</h2>
+    <h2 style="text-align:center; color: #00e676; margin-top: 0; margin-bottom: 8px; flex-shrink: 0;">TUT-IA</h2>
     
     <!-- Foco de Estudo -->
-    <div style="max-width: 600px; margin: 0 auto 15px auto;">
-        <input type="text" id="materiaFoco" placeholder="Defina a matéria de hoje (Ex: História da Arte)..." style="background:#2c2c2c; border: 1px solid #444; color:#00e676; text-align:center; font-weight:bold;">
+    <div style="max-width: 600px; margin: 0 auto 10px auto; flex-shrink: 0; width: 100%;">
+        <input type="text" id="materiaFoco" placeholder="Defina a matéria de hoje (Ex: História da Arte)..." style="background:#2c2c2c; border: 1px solid #444; color:#00e676; text-align:center; font-weight:bold; margin-bottom: 0;">
     </div>
     
     <div class="chat-box" id="chatBox">
@@ -83,18 +94,18 @@
     </div>
     
     <!-- CAIXA DE TEXTO HÍBRIDA + MICROFONE -->
-    <div class="controls input-row">
+    <div class="controls input-row" style="flex-shrink: 0;">
       <input type="text" id="textoPergunta" placeholder="Digite sua pergunta aqui..." onkeypress="verificarEnter(event)">
       <button class="btn-enviar" onclick="enviarPerguntaDigitada()">Enviar ➔</button>
       <button id="btnListen" onclick="toggleListen()">🎤</button>
     </div>
     
     <!-- MODO FOCO: Botões secundários -->
-    <div id="botoesExtras" class="controls" style="margin-top: 15px;">
+    <div id="botoesExtras" class="controls" style="margin-top: 10px; margin-bottom: 0; flex-shrink: 0;">
       <button onclick="mudarTela('agendaArea')" style="background:#0078ff; color:#fff;">Agendar Prova 📅</button>
     </div>
 
-    <div id="statusEscuta"></div>
+    <div id="statusEscuta" style="flex-shrink: 0;"></div>
   </div>
 
   <!-- TELA DE REGISTO DE ESTUDANTE -->
@@ -113,7 +124,7 @@
     <h2 style="text-align:center; color: #0078ff;">Agendar Prova</h2>
     <input type="text" id="provaNome" placeholder="Matéria (Ex: Matemática)">
     <input type="datetime-local" id="provaData">
-    <input type="email" id="userEmail" placeholder="Seu e-mail" id="agendaEmail">
+    <input type="email" id="userEmail" placeholder="Seu e-mail">
     <button onclick="agendarProva()">Salvar na Agenda</button>
     <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
   </div>
@@ -148,8 +159,8 @@
 
   <script>
     // ==========================================
-    // COLE AQUI O URL DA SUA NOVA IMPLEMENTAÇÃO
-    const API_URL = "https://script.google.com/macros/s/AKfycbzzsFhfx2MiogvXIYJJ8U92iYQfz5DwQ54oozIkIbGSvJdS1ecKNYhq639Ewj3SPbiC/exec"; 
+    // COLE AQUI O URL DA SUA IMPLEMENTAÇÃO ATUAL
+    const API_URL = "https://script.google.com/macros/s/AKfycbxcqnwtPR5ZT86Hdnlk52KpoA1jWwovT2_CQWF6N8N2kAYqDp7A7dXY1M69uM1l6lkM/exec"; 
     // ==========================================
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 
@@ -273,7 +284,7 @@
       if (event.key === "Enter") enviarPerguntaDigitada();
     }
 
-    // --- NOVA LÓGICA DE VOZ (Envio por atraso automático) ---
+    // --- NOVA LÓGICA DE VOZ (Envio por atraso de 3 segundos) ---
     let timeoutFalar; 
 
     if ('webkitSpeechRecognition' in window) {
@@ -332,7 +343,7 @@
         isListening = true;
       } else {
         recognition.stop();
-        clearTimeout(timeoutFalar); // Limpa o atraso se parar manualmente
+        clearTimeout(timeoutFalar);
         btn.innerHTML = "🎤";
         btn.classList.remove("listening");
         botoesExtras.classList.remove("hidden"); 
@@ -358,10 +369,14 @@
       msgDiv.className = "message " + classe;
       msgDiv.textContent = texto;
       chat.appendChild(msgDiv);
-      chat.scrollTop = chat.scrollHeight;
+      
+      // Auto-scroll imediato para manter as mensagens visíveis
+      setTimeout(() => {
+        chat.scrollTop = chat.scrollHeight;
+      }, 50);
     }
 
-    // --- FUNÇÕES ADMIN E CADASTRO (Mantidas iguais) ---
+    // --- FUNÇÕES ADMIN E CADASTRO ---
     function realizarCadastro() {
       let nome = document.getElementById("cadNome").value;
       let email = document.getElementById("cadEmail").value;

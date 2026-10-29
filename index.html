@@ -52,8 +52,7 @@
   <!-- TELA DE LOGIN DO ALUNO (Inicial) -->
   <div id="loginAlunoArea">
     <h2 style="text-align:center; color: #00e676;">Entrar no TUT-IA</h2>
-    <!-- Indicador de versão para garantir que o cache foi limpo -->
-    <p style="text-align:center; color: #aaa; font-size: 14px;">Aceda aos seus estudos. (v2.0)</p>
+    <p style="text-align:center; color: #aaa; font-size: 14px;">Aceda aos seus estudos.</p>
     <div style="max-width: 400px; margin: 0 auto;">
       <input type="email" id="loginEmail" placeholder="Seu E-mail de Registo">
       <input type="password" id="loginSenha" placeholder="Sua Senha">
@@ -73,9 +72,6 @@
     </div>
     
     <h2 style="text-align:center; color: #00e676; margin-top: 0;">TUT-IA</h2>
-    <p style="text-align:center; font-size:12px; color:#aaa; margin-top:-10px;">
-      Palavra de Segurança: <strong id="palavraDisplay" style="color:#00e676;">tutor</strong>
-    </p>
     
     <!-- Foco de Estudo -->
     <div style="max-width: 600px; margin: 0 auto 15px auto;">
@@ -83,7 +79,7 @@
     </div>
     
     <div class="chat-box" id="chatBox">
-      <div class="message bot-msg">Olá! Sou o TUT-IA. Defina a matéria acima. Depois, digite sua pergunta ou use o microfone. Se usar a voz, diga sua palavra de segurança antes!</div>
+      <div class="message bot-msg">Olá! Sou o TUT-IA. Defina a matéria acima. Depois, digite sua pergunta ou ative o microfone. Farei a correção das suas afirmações.</div>
     </div>
     
     <!-- CAIXA DE TEXTO HÍBRIDA + MICROFONE -->
@@ -117,7 +113,7 @@
     <h2 style="text-align:center; color: #0078ff;">Agendar Prova</h2>
     <input type="text" id="provaNome" placeholder="Matéria (Ex: Matemática)">
     <input type="datetime-local" id="provaData">
-    <input type="email" id="userEmail" placeholder="Seu e-mail">
+    <input type="email" id="userEmail" placeholder="Seu e-mail" id="agendaEmail">
     <button onclick="agendarProva()">Salvar na Agenda</button>
     <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
   </div>
@@ -153,15 +149,14 @@
   <script>
     // ==========================================
     // COLE AQUI O URL DA SUA NOVA IMPLEMENTAÇÃO
-    const API_URL = "https://script.google.com/macros/s/AKfycbwmK5WQyXEs4aFV8WOZ8Dq-_33lS0U5vef5H0mCYgHhVC1_YQhMgy-lLK-Sb1uZJ7Qa/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbzzsFhfx2MiogvXIYJJ8U92iYQfz5DwQ54oozIkIbGSvJdS1ecKNYhq639Ewj3SPbiC/exec"; 
     // ==========================================
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 
     let isListening = false;
     let recognition;
-    let palavraSeguranca = "tutor"; 
     let acaoConfirmacaoPendente = null; 
-    let alunoLogado = null; // Guarda os dados na memória enquanto navega
+    let alunoLogado = null; 
 
     // --- SISTEMA DE POPUP MODERNO ---
     function showModal(titulo, mensagem, tipo, callbackConfirmar) {
@@ -201,7 +196,6 @@
     }
 
     window.onload = function() {
-      // Verifica se o aluno já fez login na sessão anterior
       let guardado = localStorage.getItem("tut_ia_aluno");
       if(guardado) {
         alunoLogado = JSON.parse(guardado);
@@ -224,11 +218,7 @@
         .then(dados => {
           if(dados.resultado.sucesso) {
             closeModal();
-            
-            // CORREÇÃO: Transforma a palavra em String antes de converter, evitando travamentos
             let palavraSegura = String(dados.resultado.palavra || "tutor").toLowerCase();
-            
-            // Salva dados no LocalStorage para não pedir login a toda a hora
             alunoLogado = { email: email, nome: dados.resultado.nome, palavra: palavraSegura };
             localStorage.setItem("tut_ia_aluno", JSON.stringify(alunoLogado));
             prepararAreaAluno();
@@ -244,9 +234,6 @@
     function prepararAreaAluno() {
       mudarTela('appArea');
       document.getElementById("nomeAlunoDisplay").textContent = "Olá, " + alunoLogado.nome + "!";
-      document.getElementById("palavraDisplay").textContent = alunoLogado.palavra;
-      palavraSeguranca = alunoLogado.palavra;
-      // Preenche o email automaticamente na agenda
       document.getElementById("userEmail").value = alunoLogado.email; 
     }
 
@@ -264,7 +251,7 @@
       let materia = document.getElementById("materiaFoco").value || "Estudos Gerais";
 
       addMessage(perguntaTexto, 'user-msg');
-      document.getElementById("textoPergunta").value = ""; // Limpa a caixa de texto
+      document.getElementById("textoPergunta").value = ""; 
       falar("A processar...");
       
       fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(perguntaTexto)}&materia=${encodeURIComponent(materia)}`, fetchOptions)
@@ -277,7 +264,6 @@
         });
     }
 
-    // Acionado pelo botão "Enviar" ou tecla Enter na caixa de texto
     function enviarPerguntaDigitada() {
       let texto = document.getElementById("textoPergunta").value.trim();
       enviarParaIA(texto);
@@ -287,7 +273,9 @@
       if (event.key === "Enter") enviarPerguntaDigitada();
     }
 
-    // Configuração de Reconhecimento de Voz
+    // --- NOVA LÓGICA DE VOZ (Envio por atraso automático) ---
+    let timeoutFalar; 
+
     if ('webkitSpeechRecognition' in window) {
       recognition = new webkitSpeechRecognition();
       recognition.continuous = true;
@@ -296,27 +284,33 @@
 
       recognition.onresult = function(event) {
         let textoEmTempoReal = "";
-        let isFinal = false;
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          textoEmTempoReal += event.results[i][0].transcript.toLowerCase();
-          if (event.results[i].isFinal) { isFinal = true; }
+          textoEmTempoReal += event.results[i][0].transcript;
         }
 
-        document.getElementById('statusEscuta').textContent = 'A ouvir: "' + textoEmTempoReal + '"';
+        document.getElementById('statusEscuta').textContent = 'A ouvir: "' + textoEmTempoReal.toLowerCase() + '"';
         
-        if (isFinal && textoEmTempoReal.includes(palavraSeguranca)) {
-          let pergunta = textoEmTempoReal.replace(palavraSeguranca, "").trim();
-          document.getElementById('statusEscuta').textContent = ""; 
-          enviarParaIA(pergunta); // Usa a mesma função da digitação para enviar
-        }
+        clearTimeout(timeoutFalar);
+        
+        timeoutFalar = setTimeout(() => {
+          let frase = textoEmTempoReal.trim();
+          if (frase !== "") {
+            document.getElementById('statusEscuta').textContent = ""; 
+            enviarParaIA(frase); 
+            recognition.stop(); 
+          }
+        }, 3000);
       };
+      
       recognition.onerror = function(event) { 
-        // Esconde o erro inofensivo 'aborted' e 'no-speech' para não poluir a tela
         if (event.error !== 'aborted' && event.error !== 'no-speech') {
           document.getElementById('statusEscuta').textContent = "Erro: " + event.error; 
         }
       };
-      recognition.onend = function() { if (isListening) recognition.start(); };
+      
+      recognition.onend = function() { 
+        if (isListening) recognition.start(); 
+      };
     } else {
         showModal("Aviso", "Seu navegador não suporta voz. Use a caixa de texto.", "erro");
     }
@@ -332,12 +326,13 @@
         btn.innerHTML = "🔴";
         btn.classList.add("listening");
         botoesExtras.classList.add("hidden"); 
-        inputTexto.disabled = true; // Desativa a digitação enquanto ouve
+        inputTexto.disabled = true; 
         btnEnviar.disabled = true;
-        document.getElementById('statusEscuta').textContent = "A aguardar palavra de segurança...";
+        document.getElementById('statusEscuta').textContent = "Pode falar, a escutar...";
         isListening = true;
       } else {
         recognition.stop();
+        clearTimeout(timeoutFalar); // Limpa o atraso se parar manualmente
         btn.innerHTML = "🎤";
         btn.classList.remove("listening");
         botoesExtras.classList.remove("hidden"); 
@@ -380,7 +375,7 @@
         .then(res => res.json())
         .then(dados => {
           showModal("Sucesso", dados.resultado, "alerta");
-          mudarTela('loginAlunoArea'); // Volta para o login após criar conta
+          mudarTela('loginAlunoArea'); 
         }).catch(err => showModal("Erro", "Falha de comunicação.", "erro"));
     }
 

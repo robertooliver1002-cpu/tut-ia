@@ -36,28 +36,65 @@
     .modal-btn-cancel { background: #444; color: white; }
     .modal-btn-confirm { background: #0078ff; color: white; }
     .modal-btn-danger { background: #ff1744; color: white; }
+
+    /* ESTILOS DA CAIXA DE TEXTO HÍBRIDA */
+    .input-row { display: flex; gap: 10px; width: 100%; justify-content: center; max-width: 600px; margin: 0 auto; align-items: center; }
+    .input-row input { margin-bottom: 0; flex: 1; }
+    .input-row button.btn-enviar { width: auto; background: #0078ff; color: #fff; padding: 12px 20px; border-radius: 8px; }
+    .input-row button#btnListen { width: auto; padding: 12px 20px; border-radius: 8px; }
+    
+    .cabecalho-aluno { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; }
+    .btn-sair { background: #ff1744; color: white; padding: 5px 10px; font-size: 12px; border-radius: 5px; width: auto; max-width: none;}
   </style>
 </head>
 <body>
 
-  <!-- TELA DE CHAT PRINCIPAL -->
-  <div id="appArea">
+  <!-- TELA DE LOGIN DO ALUNO (Inicial) -->
+  <div id="loginAlunoArea">
+    <h2 style="text-align:center; color: #00e676;">Entrar no TUT-IA</h2>
+    <p style="text-align:center; color: #aaa; font-size: 14px;">Aceda aos seus estudos.</p>
+    <div style="max-width: 400px; margin: 0 auto;">
+      <input type="email" id="loginEmail" placeholder="Seu E-mail de Registo">
+      <input type="password" id="loginSenha" placeholder="Sua Senha">
+      <button onclick="fazerLoginAluno()" style="width: 100%; margin-bottom: 10px;">Entrar</button>
+      <button onclick="mudarTela('cadastroArea')" class="secondary" style="width: 100%; background: #8a2be2;">Criar Conta</button>
+      <div style="text-align:center; margin-top:20px;">
+        <button onclick="mudarTela('loginAdminArea')" class="admin-btn" style="background:transparent; border: 1px solid #ff9800; color:#ff9800;">Acesso Admin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA DE CHAT PRINCIPAL (Oculta até fazer login) -->
+  <div id="appArea" class="hidden">
+    <div class="cabecalho-aluno">
+      <span id="nomeAlunoDisplay">Olá, Estudante!</span>
+      <button class="btn-sair" onclick="fazerLogout()">Sair</button>
+    </div>
+    
     <h2 style="text-align:center; color: #00e676; margin-top: 0;">TUT-IA</h2>
-    <p style="text-align:center; font-size:12px; color:#aaa; margin-top:-10px;">Diga sua palavra de segurança seguida da pergunta.</p>
+    <p style="text-align:center; font-size:12px; color:#aaa; margin-top:-10px;">
+      Palavra de Segurança: <strong id="palavraDisplay" style="color:#00e676;">tutor</strong>
+    </p>
+    
+    <!-- Foco de Estudo -->
+    <div style="max-width: 600px; margin: 0 auto 15px auto;">
+        <input type="text" id="materiaFoco" placeholder="Defina a matéria de hoje (Ex: História da Arte)..." style="background:#2c2c2c; border: 1px solid #444; color:#00e676; text-align:center; font-weight:bold;">
+    </div>
     
     <div class="chat-box" id="chatBox">
-      <div class="message bot-msg">Olá! Sou o TUT-IA. Toque no botão abaixo para ativar a escuta.</div>
+      <div class="message bot-msg">Olá! Sou o TUT-IA. Defina a matéria acima. Depois, digite sua pergunta ou use o microfone. Se usar a voz, diga sua palavra de segurança antes!</div>
     </div>
     
-    <div class="controls">
-      <button id="btnListen" onclick="toggleListen()">Ativar Escuta 🎤</button>
+    <!-- CAIXA DE TEXTO HÍBRIDA + MICROFONE -->
+    <div class="controls input-row">
+      <input type="text" id="textoPergunta" placeholder="Digite sua pergunta aqui..." onkeypress="verificarEnter(event)">
+      <button class="btn-enviar" onclick="enviarPerguntaDigitada()">Enviar ➔</button>
+      <button id="btnListen" onclick="toggleListen()">🎤</button>
     </div>
     
-    <!-- MODO FOCO: Botões agrupados para serem escondidos durante a escuta -->
-    <div id="botoesExtras" class="controls">
+    <!-- MODO FOCO: Botões secundários -->
+    <div id="botoesExtras" class="controls" style="margin-top: 15px;">
       <button onclick="mudarTela('agendaArea')" style="background:#0078ff; color:#fff;">Agendar Prova 📅</button>
-      <button onclick="mudarTela('cadastroArea')" style="background:#8a2be2; color:#fff;">Criar Conta 📝</button>
-      <button onclick="mudarTela('loginAdminArea')" class="admin-btn">Área Admin ⚙️</button>
     </div>
 
     <div id="statusEscuta"></div>
@@ -71,7 +108,7 @@
     <input type="password" id="cadSenha" placeholder="Crie uma Senha">
     <input type="text" id="cadPalavra" placeholder="Palavra de Segurança (ex: Tutor)">
     <button onclick="realizarCadastro()">Criar Conta</button>
-    <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
+    <button onclick="mudarTela('loginAlunoArea')" class="secondary" style="margin-top:10px;">Voltar ao Login</button>
   </div>
 
   <!-- TELA DE AGENDAR PROVA -->
@@ -79,7 +116,7 @@
     <h2 style="text-align:center; color: #0078ff;">Agendar Prova</h2>
     <input type="text" id="provaNome" placeholder="Matéria (Ex: Matemática)">
     <input type="datetime-local" id="provaData">
-    <input type="email" id="userEmail" placeholder="Seu e-mail">
+    <input type="email" id="userEmail" placeholder="Seu e-mail" id="agendaEmail">
     <button onclick="agendarProva()">Salvar na Agenda</button>
     <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
   </div>
@@ -90,14 +127,14 @@
     <input type="text" id="adminUser" placeholder="Usuário Master">
     <input type="password" id="adminPass" placeholder="Senha Master">
     <button onclick="entrarAdmin()" style="background:#ff9800;">Acessar Painel</button>
-    <button onclick="mudarTela('appArea')" class="secondary" style="margin-top:10px;">Voltar</button>
+    <button onclick="mudarTela('loginAlunoArea')" class="secondary" style="margin-top:10px;">Voltar</button>
   </div>
 
   <!-- TELA DO PAINEL ADMIN -->
   <div id="painelAdminArea" class="hidden">
     <h2 style="text-align:center; color: #ff9800;">Painel de Controle</h2>
     <div class="admin-panel-content" id="listaUsuariosContainer">Carregando utilizadores...</div>
-    <button onclick="mudarTela('appArea')" class="secondary">Sair do Painel</button>
+    <button onclick="mudarTela('loginAlunoArea')" class="secondary">Sair do Painel</button>
   </div>
 
   <!-- POPUP MODERNO -->
@@ -115,14 +152,15 @@
   <script>
     // ==========================================
     // COLE AQUI O URL DA SUA NOVA IMPLEMENTAÇÃO
-    const API_URL = "https://script.google.com/macros/s/AKfycbxU2Y4MCffGMX6yZ9QJ82iRVAIYMHdquhd1ek09nQbt7S34pCf-z8VAGlBSUXuPLT17/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbzLViQh3iG57_rMm5TbJ7Wbh3ALQ_dwxDQ7L-Y2UGkdwd7WyZuoHpnZb0oQemMfMSU/exec"; 
     // ==========================================
-    const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; // Força permissões CORS do Apps Script
+    const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 
     let isListening = false;
     let recognition;
-    const palavraSeguranca = "tutor"; 
+    let palavraSeguranca = "tutor"; 
     let acaoConfirmacaoPendente = null; 
+    let alunoLogado = null; // Guarda os dados na memória enquanto navega
 
     // --- SISTEMA DE POPUP MODERNO ---
     function showModal(titulo, mensagem, tipo, callbackConfirmar) {
@@ -148,120 +186,97 @@
       document.getElementById('customModal').classList.add('active');
     }
 
-    function closeModal() {
-      document.getElementById('customModal').classList.remove('active');
-    }
+    function closeModal() { document.getElementById('customModal').classList.remove('active'); }
 
     document.getElementById('modalBtnConfirm').addEventListener('click', function() {
-      if (typeof acaoConfirmacaoPendente === 'function') {
-        acaoConfirmacaoPendente();
-      }
+      if (typeof acaoConfirmacaoPendente === 'function') acaoConfirmacaoPendente();
       closeModal();
     });
-    // ---------------------------------
 
+    // --- GESTÃO DE TELAS E LOGIN ---
     function mudarTela(idTelaAlvo) {
-      document.querySelectorAll('#appArea, #cadastroArea, #agendaArea, #loginAdminArea, #painelAdminArea').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('body > div:not(.modal-overlay)').forEach(el => el.classList.add('hidden'));
       document.getElementById(idTelaAlvo).classList.remove('hidden');
     }
 
-    function realizarCadastro() {
-      let nome = document.getElementById("cadNome").value;
-      let email = document.getElementById("cadEmail").value;
-      let senha = document.getElementById("cadSenha").value;
-      let palavra = document.getElementById("cadPalavra").value;
+    window.onload = function() {
+      // Verifica se o aluno já fez login na sessão anterior
+      let guardado = localStorage.getItem("tut_ia_aluno");
+      if(guardado) {
+        alunoLogado = JSON.parse(guardado);
+        prepararAreaAluno();
+      }
+    };
 
-      if(!nome || !email || !senha || !palavra) {
-        showModal("Atenção", "Preencha todos os campos!", "alerta");
-        return;
+    function fazerLoginAluno() {
+      let email = document.getElementById("loginEmail").value;
+      let senha = document.getElementById("loginSenha").value;
+
+      if(!email || !senha) {
+        showModal("Atenção", "Preencha e-mail e senha.", "alerta"); return;
       }
 
-      showModal("Aguarde", "A registar estudante...", "info");
+      showModal("Aguarde", "A verificar dados...", "info");
 
-      fetch(`${API_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`, fetchOptions)
+      fetch(`${API_URL}?acao=validarLogin&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
-          showModal("Sucesso", dados.resultado, "alerta");
-          document.getElementById("cadNome").value = "";
-          document.getElementById("cadEmail").value = "";
-          document.getElementById("cadSenha").value = "";
-          document.getElementById("cadPalavra").value = "";
-          mudarTela('appArea');
-        }).catch(err => {
-          showModal("Erro", "Falha de comunicação com o servidor.", "erro");
-        });
-    }
-
-    function entrarAdmin() {
-      let user = document.getElementById("adminUser").value;
-      let pass = document.getElementById("adminPass").value;
-      
-      if(!user || !pass) {
-        showModal("Atenção", "Preencha todos os campos!", "alerta");
-        return;
-      }
-
-      let btn = document.querySelector("#loginAdminArea button");
-      btn.textContent = "Validando...";
-
-      fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`, fetchOptions)
-        .then(res => res.json())
-        .then(dados => {
-          btn.textContent = "Acessar Painel";
-          if(dados.resultado === true) {
-            mudarTela('painelAdminArea');
-            carregarUsuarios(); 
-            document.getElementById("adminUser").value = "";
-            document.getElementById("adminPass").value = "";
+          if(dados.resultado.sucesso) {
+            closeModal();
+            // Salva dados no LocalStorage para não pedir login a toda a hora
+            alunoLogado = { email: email, nome: dados.resultado.nome, palavra: dados.resultado.palavra.toLowerCase() };
+            localStorage.setItem("tut_ia_aluno", JSON.stringify(alunoLogado));
+            prepararAreaAluno();
           } else {
-            showModal("Erro de Acesso", "Usuário ou senha incorretos!", "erro");
+            showModal("Acesso Negado", dados.resultado.mensagem, "erro");
           }
-        }).catch(err => {
-          btn.textContent = "Acessar Painel";
-          showModal("Erro", "Falha de comunicação com o servidor.", "erro");
-        });
+        }).catch(err => showModal("Erro", "Falha de comunicação com o servidor.", "erro"));
     }
 
-    function carregarUsuarios() {
-      document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
-      fetch(`${API_URL}?acao=listarUsuarios`, fetchOptions)
-        .then(res => res.json())
-        .then(dados => {
-          document.getElementById("listaUsuariosContainer").innerHTML = "<h3 style='margin-top:0;'>Usuários Cadastrados:</h3>" + dados.resultado;
-        });
+    function prepararAreaAluno() {
+      mudarTela('appArea');
+      document.getElementById("nomeAlunoDisplay").textContent = "Olá, " + alunoLogado.nome + "!";
+      document.getElementById("palavraDisplay").textContent = alunoLogado.palavra;
+      palavraSeguranca = alunoLogado.palavra;
+      // Preenche o email automaticamente na agenda
+      document.getElementById("userEmail").value = alunoLogado.email; 
     }
 
-    function excluirUsuario(email) {
-      showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
-        showModal("Aguarde", "Excluindo utilizador...", "info");
-        fetch(`${API_URL}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions)
-          .then(res => res.json())
-          .then(dados => {
-            showModal("Sucesso", dados.resultado, "alerta");
-            carregarUsuarios(); 
-          });
-      });
+    function fazerLogout() {
+      localStorage.removeItem("tut_ia_aluno");
+      alunoLogado = null;
+      document.getElementById("loginEmail").value = "";
+      document.getElementById("loginSenha").value = "";
+      mudarTela('loginAlunoArea');
     }
 
-    function agendarProva() {
-      let nome = document.getElementById("provaNome").value;
-      let data = document.getElementById("provaData").value;
-      let email = document.getElementById("userEmail").value;
+    // --- MÉTODOS DE COMUNICAÇÃO COM A IA ---
+    function enviarParaIA(perguntaTexto) {
+      if(!perguntaTexto) return;
+      let materia = document.getElementById("materiaFoco").value || "Estudos Gerais";
+
+      addMessage(perguntaTexto, 'user-msg');
+      document.getElementById("textoPergunta").value = ""; // Limpa a caixa de texto
+      falar("A processar...");
       
-      if(!nome || !data || !email) {
-          showModal("Atenção", "Preencha todos os dados da prova.", "alerta");
-          return;
-      }
-
-      fetch(`${API_URL}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
+      fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(perguntaTexto)}&materia=${encodeURIComponent(materia)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
-          showModal("Agenda", dados.resultado, "alerta");
-          mudarTela('appArea');
-          document.getElementById("provaNome").value = "";
-          document.getElementById("provaData").value = "";
-          document.getElementById("userEmail").value = "";
+          addMessage(dados.resultado, 'bot-msg');
+          falar(dados.resultado); 
+        }).catch(err => {
+          addMessage("Erro de conexão. A IA não respondeu.", 'bot-msg');
         });
+    }
+
+    // Acionado pelo botão "Enviar" ou tecla Enter na caixa de texto
+    function enviarPerguntaDigitada() {
+      let texto = document.getElementById("textoPergunta").value.trim();
+      enviarParaIA(texto);
+    }
+
+    function verificarEnter(event) {
+      if (event.key === "Enter") enviarPerguntaDigitada();
     }
 
     // Configuração de Reconhecimento de Voz
@@ -284,42 +299,42 @@
         if (isFinal && textoEmTempoReal.includes(palavraSeguranca)) {
           let pergunta = textoEmTempoReal.replace(palavraSeguranca, "").trim();
           document.getElementById('statusEscuta').textContent = ""; 
-          addMessage(pergunta, 'user-msg');
-          falar("A processar...");
-          
-          fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(pergunta)}`, fetchOptions)
-            .then(res => res.json())
-            .then(dados => {
-              addMessage(dados.resultado, 'bot-msg');
-              falar(dados.resultado); 
-            }).catch(err => {
-              addMessage("Erro ao consultar a inteligência artificial. Verifique a conexão.", 'bot-msg');
-              console.error("Erro Fetch IA:", err);
-            });
+          enviarParaIA(pergunta); // Usa a mesma função da digitação para enviar
         }
       };
-      recognition.onerror = function(event) { document.getElementById('statusEscuta').textContent = "Erro: " + event.error; };
+      recognition.onerror = function(event) { 
+        // Esconde o erro inofensivo 'aborted' e 'no-speech' para não poluir a tela
+        if (event.error !== 'aborted' && event.error !== 'no-speech') {
+          document.getElementById('statusEscuta').textContent = "Erro: " + event.error; 
+        }
+      };
       recognition.onend = function() { if (isListening) recognition.start(); };
     } else {
-        showModal("Aviso de Compatibilidade", "Seu navegador não suporta reconhecimento de voz. Use o Chrome ou Safari.", "erro");
+        showModal("Aviso", "Seu navegador não suporta voz. Use a caixa de texto.", "erro");
     }
 
     function toggleListen() {
       let btn = document.getElementById("btnListen");
-      let botoesExtras = document.getElementById("botoesExtras"); // Nova variável para o Modo de Foco
+      let botoesExtras = document.getElementById("botoesExtras"); 
+      let inputTexto = document.getElementById("textoPergunta");
+      let btnEnviar = document.querySelector(".btn-enviar");
 
       if (!isListening) {
         recognition.start();
-        btn.textContent = "Escutando... 🔴";
+        btn.innerHTML = "🔴";
         btn.classList.add("listening");
-        botoesExtras.classList.add("hidden"); // Oculta botões adicionais
-        document.getElementById('statusEscuta').textContent = "Aguardando você falar...";
+        botoesExtras.classList.add("hidden"); 
+        inputTexto.disabled = true; // Desativa a digitação enquanto ouve
+        btnEnviar.disabled = true;
+        document.getElementById('statusEscuta').textContent = "A aguardar palavra de segurança...";
         isListening = true;
       } else {
         recognition.stop();
-        btn.textContent = "Ativar Escuta 🎤";
+        btn.innerHTML = "🎤";
         btn.classList.remove("listening");
-        botoesExtras.classList.remove("hidden"); // Restaura botões
+        botoesExtras.classList.remove("hidden"); 
+        inputTexto.disabled = false;
+        btnEnviar.disabled = false;
         document.getElementById('statusEscuta').textContent = "";
         isListening = false;
       }
@@ -341,6 +356,67 @@
       msgDiv.textContent = texto;
       chat.appendChild(msgDiv);
       chat.scrollTop = chat.scrollHeight;
+    }
+
+    // --- FUNÇÕES ADMIN E CADASTRO (Mantidas iguais) ---
+    function realizarCadastro() {
+      let nome = document.getElementById("cadNome").value;
+      let email = document.getElementById("cadEmail").value;
+      let senha = document.getElementById("cadSenha").value;
+      let palavra = document.getElementById("cadPalavra").value;
+
+      if(!nome || !email || !senha || !palavra) { showModal("Atenção", "Preencha todos os campos!", "alerta"); return; }
+      showModal("Aguarde", "A registar estudante...", "info");
+
+      fetch(`${API_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`, fetchOptions)
+        .then(res => res.json())
+        .then(dados => {
+          showModal("Sucesso", dados.resultado, "alerta");
+          mudarTela('loginAlunoArea'); // Volta para o login após criar conta
+        }).catch(err => showModal("Erro", "Falha de comunicação.", "erro"));
+    }
+
+    function entrarAdmin() {
+      let user = document.getElementById("adminUser").value;
+      let pass = document.getElementById("adminPass").value;
+      if(!user || !pass) { showModal("Atenção", "Preencha todos os campos!", "alerta"); return; }
+      
+      document.querySelector("#loginAdminArea button").textContent = "Validando...";
+      fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`, fetchOptions)
+        .then(res => res.json())
+        .then(dados => {
+          document.querySelector("#loginAdminArea button").textContent = "Acessar Painel";
+          if(dados.resultado === true) { mudarTela('painelAdminArea'); carregarUsuarios(); } 
+          else { showModal("Erro de Acesso", "Usuário ou senha incorretos!", "erro"); }
+        }).catch(err => { document.querySelector("#loginAdminArea button").textContent = "Acessar Painel"; showModal("Erro", "Falha.", "erro"); });
+    }
+
+    function carregarUsuarios() {
+      document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
+      fetch(`${API_URL}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document.getElementById("listaUsuariosContainer").innerHTML = "<h3>Usuários Cadastrados:</h3>" + dados.resultado; });
+    }
+
+    function excluirUsuario(email) {
+      showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
+        showModal("Aguarde", "Excluindo utilizador...", "info");
+        fetch(`${API_URL}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions).then(res => res.json()).then(dados => { showModal("Sucesso", dados.resultado, "alerta"); carregarUsuarios(); });
+      });
+    }
+
+    function agendarProva() {
+      let nome = document.getElementById("provaNome").value;
+      let data = document.getElementById("provaData").value;
+      let email = document.getElementById("userEmail").value;
+      if(!nome || !data || !email) { showModal("Atenção", "Preencha todos os dados da prova.", "alerta"); return; }
+
+      fetch(`${API_URL}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
+        .then(res => res.json())
+        .then(dados => {
+          showModal("Agenda", dados.resultado, "alerta");
+          mudarTela('appArea');
+          document.getElementById("provaNome").value = "";
+          document.getElementById("provaData").value = "";
+        });
     }
   </script>
 </body>

@@ -8,6 +8,11 @@
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     
+    /* Configuração rápida de Endpoint */
+    .config-bar { background: #1a1a1a; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; font-size: 12px; flex-shrink: 0; border: 1px solid #333; }
+    .config-bar input { margin: 0; padding: 6px 10px; font-size: 12px; flex: 1; background: #252525; border: 1px solid #444; color: #00e676; border-radius: 6px; }
+    .config-bar button { width: auto; max-width: none; padding: 6px 14px; font-size: 12px; border-radius: 6px; background: #0078ff; color: #fff; box-shadow: none; }
+
     /* Contentor do Chat: Trava a altura para forçar a barra de rolagem */
     #appArea:not(.hidden) { display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; overflow: hidden; }
     .chat-box { flex: 1; overflow-y: auto; background: #1e1e1e; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); min-height: 0; scroll-behavior: smooth; }
@@ -35,7 +40,7 @@
     ul { padding-left: 20px; margin: 0; }
     li { margin-bottom: 10px; border-bottom: 1px solid #444; padding-bottom: 5px; list-style: none; }
     
-    /* ESTILOS DO POPUP MODERNO */
+    /* POPUP MODERNO */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(3px); }
     .modal-overlay.active { opacity: 1; pointer-events: all; }
     .modal-box { background: #1e1e1e; padding: 25px; border-radius: 20px; text-align: center; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); transform: translateY(-30px); transition: transform 0.3s ease; border: 1px solid #333; }
@@ -48,7 +53,7 @@
     .modal-btn-confirm { background: #0078ff; color: white; }
     .modal-btn-danger { background: #ff1744; color: white; }
 
-    /* ESTILOS DA CAIXA DE TEXTO HÍBRIDA */
+    /* ENTRADA HÍBRIDA */
     .input-row { display: flex; gap: 10px; width: 100%; justify-content: center; max-width: 600px; margin: 0 auto; align-items: center; }
     .input-row input { margin-bottom: 0; flex: 1; }
     .input-row button.btn-enviar { width: auto; background: #0078ff; color: #fff; padding: 12px 20px; border-radius: 8px; }
@@ -59,6 +64,13 @@
   </style>
 </head>
 <body>
+
+  <!-- BARRA DE CONFIGURAÇÃO DE IMPLANTAÇÃO (Salva no dispositivo) -->
+  <div class="config-bar">
+    <span style="color:#aaa;">API Atual:</span>
+    <input type="text" id="campoApiUrl" placeholder="Cole o URL da implantação aqui...">
+    <button onclick="salvarNovoEndpoint()">Salvar URL</button>
+  </div>
 
   <!-- TELA DE LOGIN DO ALUNO (Inicial) -->
   <div id="loginAlunoArea">
@@ -75,7 +87,7 @@
     </div>
   </div>
 
-  <!-- TELA DE CHAT PRINCIPAL (Oculta até fazer login) -->
+  <!-- TELA DE CHAT PRINCIPAL -->
   <div id="appArea" class="hidden">
     <div class="cabecalho-aluno">
       <span id="nomeAlunoDisplay">Olá, Estudante!</span>
@@ -93,14 +105,14 @@
       <div class="message bot-msg">Olá! Sou o TUT-IA. Defina a matéria acima. Depois, digite sua pergunta ou ative o microfone. Farei a correção das suas afirmações.</div>
     </div>
     
-    <!-- CAIXA DE TEXTO HÍBRIDA + MICROFONE -->
+    <!-- ENTRADA HÍBRIDA -->
     <div class="controls input-row" style="flex-shrink: 0;">
       <input type="text" id="textoPergunta" placeholder="Digite sua pergunta aqui..." onkeypress="verificarEnter(event)">
       <button class="btn-enviar" onclick="enviarPerguntaDigitada()">Enviar ➔</button>
       <button id="btnListen" onclick="toggleListen()">🎤</button>
     </div>
     
-    <!-- MODO FOCO: Botões secundários -->
+    <!-- BOTÕES EXTRAS -->
     <div id="botoesExtras" class="controls" style="margin-top: 10px; margin-bottom: 0; flex-shrink: 0;">
       <button onclick="mudarTela('agendaArea')" style="background:#0078ff; color:#fff;">Agendar Prova 📅</button>
     </div>
@@ -159,15 +171,37 @@
 
   <script>
     // ==========================================
-    // COLE AQUI O URL DA SUA IMPLEMENTAÇÃO ATUAL
-    const API_URL = "https://script.google.com/macros/s/AKfycbzvjMb32T_k_sOH9N_TGUYrkHGfCND0zSqhSN2isRZ1b27BWrf2NykMA44xs90sQlg/exec"; 
-    // ==========================================
+    // ENDPOINT PADRÃO PRESERVADO (Com suporte a atualização visual)
+    const ENDPOINT_PADRAO = "https://script.google.com/macros/s/AKfycbzLViQh3iG57_rMm5TbJ7Wbh3ALQ_dwxDQ7L-Y2UGkdwd7WyZuoHpnZb0oQemMfMSU/exec";
+    
+    function obterApiUrl() {
+      return localStorage.getItem("tut_ia_endpoint") || ENDPOINT_PADRAO;
+    }
+
+    function salvarNovoEndpoint() {
+      let valor = document.getElementById("campoApiUrl").value.trim();
+      if (!valor) valor = ENDPOINT_PADRAO;
+      localStorage.setItem("tut_ia_endpoint", valor);
+      showModal("Configuração", "Endereço da API atualizado com sucesso!", "info");
+    }
+
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
 
     let isListening = false;
     let recognition;
     let acaoConfirmacaoPendente = null; 
     let alunoLogado = null; 
+    let isSpeaking = false; 
+
+    // --- DESTRAVA DE ÁUDIO NO SAFARI / IOS ---
+    function destravarAudioIOS() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.resume();
+        let falaSilenciosa = new SpeechSynthesisUtterance('');
+        falaSilenciosa.volume = 0;
+        window.speechSynthesis.speak(falaSilenciosa);
+      }
+    }
 
     // --- SISTEMA DE POPUP MODERNO ---
     function showModal(titulo, mensagem, tipo, callbackConfirmar) {
@@ -202,11 +236,14 @@
 
     // --- GESTÃO DE TELAS E LOGIN ---
     function mudarTela(idTelaAlvo) {
+      destravarAudioIOS();
       document.querySelectorAll('body > div:not(.modal-overlay)').forEach(el => el.classList.add('hidden'));
       document.getElementById(idTelaAlvo).classList.remove('hidden');
     }
 
     window.onload = function() {
+      document.getElementById("campoApiUrl").value = obterApiUrl();
+
       let guardado = localStorage.getItem("tut_ia_aluno");
       if(guardado) {
         alunoLogado = JSON.parse(guardado);
@@ -215,6 +252,7 @@
     };
 
     function fazerLoginAluno() {
+      destravarAudioIOS();
       let email = document.getElementById("loginEmail").value;
       let senha = document.getElementById("loginSenha").value;
 
@@ -224,7 +262,7 @@
 
       showModal("Aguarde", "A verificar dados...", "info");
 
-      fetch(`${API_URL}?acao=validarLogin&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`, fetchOptions)
+      fetch(`${obterApiUrl()}?acao=validarLogin&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           if(dados.resultado.sucesso) {
@@ -256,26 +294,44 @@
       mudarTela('loginAlunoArea');
     }
 
-    // --- MÉTODOS DE COMUNICAÇÃO COM A IA ---
-    function enviarParaIA(perguntaTexto) {
+    // --- MÉTODOS DE COMUNICAÇÃO COM A IA COM RETRY AUTOMÁTICO ---
+    function enviarParaIA(perguntaTexto, tentativa = 1) {
       if(!perguntaTexto) return;
       let materia = document.getElementById("materiaFoco").value || "Estudos Gerais";
 
-      addMessage(perguntaTexto, 'user-msg');
-      document.getElementById("textoPergunta").value = ""; 
-      falar("A processar...");
+      if (tentativa === 1) {
+        addMessage(perguntaTexto, 'user-msg');
+        falar("A processar...");
+      }
       
-      fetch(`${API_URL}?acao=perguntar&pergunta=${encodeURIComponent(perguntaTexto)}&materia=${encodeURIComponent(materia)}`, fetchOptions)
+      document.getElementById("textoPergunta").value = ""; 
+      
+      fetch(`${obterApiUrl()}?acao=perguntar&pergunta=${encodeURIComponent(perguntaTexto)}&materia=${encodeURIComponent(materia)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
-          addMessage(dados.resultado, 'bot-msg');
-          falar(dados.resultado); 
+          let resposta = dados.resultado || "";
+
+          // Se detectar alta demanda, reenvia automaticamente até 3 vezes
+          if (typeof resposta === "string" && (resposta.includes("experiencing high demand") || resposta.includes("503") || resposta.includes("demand"))) {
+            if (tentativa <= 3) {
+              document.getElementById('statusEscuta').textContent = `Servidor com alta demanda. Tentativa ${tentativa} de 3...`;
+              setTimeout(() => {
+                enviarParaIA(perguntaTexto, tentativa + 1);
+              }, 2500);
+              return;
+            }
+          }
+
+          addMessage(resposta, 'bot-msg');
+          falar(resposta); 
         }).catch(err => {
           addMessage("Erro de conexão. A IA não respondeu.", 'bot-msg');
+          falar("Erro de conexão. A inteligência não respondeu.");
         });
     }
 
     function enviarPerguntaDigitada() {
+      destravarAudioIOS();
       let texto = document.getElementById("textoPergunta").value.trim();
       enviarParaIA(texto);
     }
@@ -284,17 +340,21 @@
       if (event.key === "Enter") enviarPerguntaDigitada();
     }
 
-    // --- NOVA LÓGICA DE VOZ (Envio por atraso de 3 segundos) ---
+    // --- LÓGICA DE VOZ (Buffer contínuo + pausa enquanto a IA fala) ---
     let timeoutFalar; 
-    let textoAcumuladoCompleto = ""; // Guarda toda a leitura contínua de enunciados longos
+    let textoAcumuladoCompleto = ""; 
 
-    if ('webkitSpeechRecognition' in window) {
-      recognition = new webkitSpeechRecognition();
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true; 
       recognition.lang = 'pt-BR';
 
       recognition.onresult = function(event) {
+        if (isSpeaking) return;
+
         let textoSessaoAtual = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
@@ -307,17 +367,16 @@
         let textoVisivel = (textoAcumuladoCompleto + " " + textoSessaoAtual).trim();
         document.getElementById('statusEscuta').textContent = 'A ouvir: "' + textoVisivel.toLowerCase() + '"';
         
-        // Cancela o disparo enquanto continuar falando
         clearTimeout(timeoutFalar);
         
-        // 4,5 segundos de silêncio absoluto para permitir pausas de vírgula e respiração
+        // 4,5s de tolerância para enunciados longos e respiração
         timeoutFalar = setTimeout(() => {
           let fraseFinal = (textoAcumuladoCompleto + " " + textoSessaoAtual).trim();
-          if (fraseFinal !== "") {
+          if (fraseFinal !== "" && !isSpeaking) {
             document.getElementById('statusEscuta').textContent = ""; 
             enviarParaIA(fraseFinal); 
-            textoAcumuladoCompleto = ""; // Limpa o buffer para o próximo enunciado
-            recognition.stop(); 
+            textoAcumuladoCompleto = ""; 
+            try { recognition.stop(); } catch(e) {}
           }
         }, 4500);
       };
@@ -329,7 +388,7 @@
       };
       
       recognition.onend = function() { 
-        if (isListening) {
+        if (isListening && !isSpeaking) {
           try { recognition.start(); } catch(e) {}
         }
       };
@@ -338,6 +397,7 @@
     }
 
     function toggleListen() {
+      destravarAudioIOS();
       let btn = document.getElementById("btnListen");
       let botoesExtras = document.getElementById("botoesExtras"); 
       let inputTexto = document.getElementById("textoPergunta");
@@ -345,18 +405,18 @@
 
       if (!isListening) {
         textoAcumuladoCompleto = "";
-        recognition.start();
+        try { recognition.start(); } catch(e) {}
         btn.innerHTML = "🔴";
         btn.classList.add("listening");
         botoesExtras.classList.add("hidden"); 
         inputTexto.disabled = true; 
         btnEnviar.disabled = true;
-        document.getElementById('statusEscuta').textContent = "Pode ler o enunciado completo, a escutar...";
+        document.getElementById('statusEscuta').textContent = "Pode ler seu enunciado, a escutar...";
         isListening = true;
       } else {
         clearTimeout(timeoutFalar);
         textoAcumuladoCompleto = "";
-        recognition.stop();
+        try { recognition.stop(); } catch(e) {}
         btn.innerHTML = "🎤";
         btn.classList.remove("listening");
         botoesExtras.classList.remove("hidden"); 
@@ -367,12 +427,54 @@
       }
     }
 
+    // --- SÍNTESE DE VOZ CALIBRADA PARA IOS / SAFARI ---
     function falar(texto) {
+      if (!('speechSynthesis' in window)) return;
+      
       window.speechSynthesis.cancel(); 
-      let synth = window.speechSynthesis;
+      window.speechSynthesis.resume(); 
+
       let utterance = new SpeechSynthesisUtterance(texto);
       utterance.lang = 'pt-BR';
-      synth.speak(utterance);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+      // Seleção forçada de voz PT-BR no iOS
+      let vozes = window.speechSynthesis.getVoices();
+      let vozPt = vozes.find(v => v.lang === 'pt-BR' || v.lang === 'pt_BR');
+      if (vozPt) utterance.voice = vozPt;
+
+      utterance.onstart = function() {
+        isSpeaking = true;
+        if (recognition) {
+          try { recognition.stop(); } catch(e) {}
+        }
+      };
+
+      utterance.onend = function() {
+        isSpeaking = false;
+        if (isListening && recognition) {
+          setTimeout(() => {
+            try { recognition.start(); } catch(e) {}
+            document.getElementById('statusEscuta').textContent = "Pronto para a próxima questão, a escutar...";
+          }, 400);
+        }
+      };
+
+      utterance.onerror = function() {
+        isSpeaking = false;
+        if (isListening && recognition) {
+          try { recognition.start(); } catch(e) {}
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = function() {
+        window.speechSynthesis.getVoices();
+      };
     }
 
     function addMessage(texto, classe) {
@@ -383,7 +485,6 @@
       msgDiv.textContent = texto;
       chat.appendChild(msgDiv);
       
-      // Auto-scroll imediato para manter as mensagens visíveis
       setTimeout(() => {
         chat.scrollTop = chat.scrollHeight;
       }, 50);
@@ -399,7 +500,7 @@
       if(!nome || !email || !senha || !palavra) { showModal("Atenção", "Preencha todos os campos!", "alerta"); return; }
       showModal("Aguarde", "A registar estudante...", "info");
 
-      fetch(`${API_URL}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`, fetchOptions)
+      fetch(`${obterApiUrl()}?acao=cadastrar&nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}&palavra=${encodeURIComponent(palavra)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           showModal("Sucesso", dados.resultado, "alerta");
@@ -413,7 +514,7 @@
       if(!user || !pass) { showModal("Atenção", "Preencha todos os campos!", "alerta"); return; }
       
       document.querySelector("#loginAdminArea button").textContent = "Validando...";
-      fetch(`${API_URL}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`, fetchOptions)
+      fetch(`${obterApiUrl()}?acao=validarAdmin&usuario=${encodeURIComponent(user)}&senha=${encodeURIComponent(pass)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           document.querySelector("#loginAdminArea button").textContent = "Acessar Painel";
@@ -424,13 +525,13 @@
 
     function carregarUsuarios() {
       document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
-      fetch(`${API_URL}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document.getElementById("listaUsuariosContainer").innerHTML = "<h3>Usuários Cadastrados:</h3>" + dados.resultado; });
+      fetch(`${obterApiUrl()}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document.getElementById("listaUsuariosContainer").innerHTML = "<h3>Usuários Cadastrados:</h3>" + dados.resultado; });
     }
 
     function excluirUsuario(email) {
       showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
         showModal("Aguarde", "Excluindo utilizador...", "info");
-        fetch(`${API_URL}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions).then(res => res.json()).then(dados => { showModal("Sucesso", dados.resultado, "alerta"); carregarUsuarios(); });
+        fetch(`${obterApiUrl()}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions).then(res => res.json()).then(dados => { showModal("Sucesso", dados.resultado, "alerta"); carregarUsuarios(); });
       });
     }
 
@@ -440,7 +541,7 @@
       let email = document.getElementById("userEmail").value;
       if(!nome || !data || !email) { showModal("Atenção", "Preencha todos os dados da prova.", "alerta"); return; }
 
-      fetch(`${API_URL}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
+      fetch(`${obterApiUrl()}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
         .then(res => res.json())
         .then(dados => {
           showModal("Agenda", dados.resultado, "alerta");

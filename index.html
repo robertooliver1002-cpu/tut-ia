@@ -67,8 +67,8 @@
 
   <!-- BARRA DE CONFIGURAÇÃO DE IMPLANTAÇÃO (Salva no dispositivo) -->
   <div class="config-bar">
-    <span style="color:#aaa;">Versão 2.05 - API Atual:</span>
-    <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycby5QU8gI3OV4K8GvI-8yBFUFjoLcKDR5dEHAn12nyZYnxLEPJqrvK95khHDIB-iVHfH/exec">
+    <span style="color:#aaa;">Versão 2.06 - API Atual:</span>
+    <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycbyMPK1himwtPQ9Ek7kAix3kT_AGsTVOby-7jZRb7DfUSOcsQkTmM_p7HDC2t0HG6dS4/exec">
     <button onclick="salvarNovoEndpoint()">Salvar URL</button>
   </div>
 
@@ -171,10 +171,12 @@
 
   <script>
     // ==========================================
-    // ENDPOINT PADRÃO PRESERVADO (Com suporte a atualização visual)
-    const ENDPOINT_PADRAO = "https://script.google.com/macros/s/AKfycbzLViQh3iG57_rMm5TbJ7Wbh3ALQ_dwxDQ7L-Y2UGkdwd7WyZuoHpnZb0oQemMfMSU/exec";
+    // COLE ABAIXO O SEU NOVO LINK DA NOVA IMPLANTAÇÃO GERADO NO APPS SCRIPT:
+    const ENDPOINT_PADRAO = "COLE_AQUI_O_NOVO_LINK_DA_NOVA_IMPLANTAÇÃO";
+    // ==========================================
     
     function obterApiUrl() {
+      // Tenta pegar o salvo. Se não existir, pega o padrão.
       return localStorage.getItem("tut_ia_endpoint") || ENDPOINT_PADRAO;
     }
 
@@ -183,6 +185,13 @@
       if (!valor) valor = ENDPOINT_PADRAO;
       localStorage.setItem("tut_ia_endpoint", valor);
       showModal("Configuração", "Endereço da API atualizado com sucesso!", "info");
+    }
+
+    // Função auxiliar para forçar a limpeza do endpoint salvo quando houver problemas
+    function limparEndpointSalvo() {
+      localStorage.removeItem("tut_ia_endpoint");
+      document.getElementById("campoApiUrl").value = ENDPOINT_PADRAO;
+      console.log("Endpoint limpo, usando padrão.");
     }
 
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
@@ -242,6 +251,8 @@
     }
 
     window.onload = function() {
+      // Limpa qualquer endpoint salvo de versões anteriores para evitar erro no celular
+      limparEndpointSalvo();
       document.getElementById("campoApiUrl").value = obterApiUrl();
 
       let guardado = localStorage.getItem("tut_ia_aluno");

@@ -8,10 +8,10 @@
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     
-    /* Configuração rápida de Endpoint - APENAS VISÍVEL NO ADMIN */
-    .config-bar { background: #1a1a1a; padding: 8px 12px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 8px; align-items: center; font-size: 12px; border: 1px solid #333; }
-    .config-bar input { margin: 0; padding: 6px 10px; font-size: 12px; flex: 1; background: #252525; border: 1px solid #444; color: #00e676; border-radius: 6px; }
-    .config-bar button { width: auto; max-width: none; padding: 6px 14px; font-size: 12px; border-radius: 6px; background: #0078ff; color: #fff; box-shadow: none; margin: 0; }
+    /* Configuração rápida de Endpoint - APENAS ADMIN */
+    .config-bar { background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #ff9800; }
+    .config-bar input { margin: 0; padding: 10px; font-size: 14px; width: 100%; background: #252525; border: 1px solid #444; color: #00e676; border-radius: 6px; }
+    .config-bar button { width: 100%; padding: 10px; font-size: 14px; border-radius: 6px; background: #ff9800; color: #fff; box-shadow: none; margin: 0; }
 
     /* Contentor do Chat: Trava a altura para forçar a barra de rolagem */
     #appArea:not(.hidden) { display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; overflow: hidden; }
@@ -147,11 +147,11 @@
   <div id="painelAdminArea" class="hidden">
     <h2 style="text-align:center; color: #ff9800;">Painel de Controle</h2>
     
-    <!-- BARRA DE CONFIGURAÇÃO DE IMPLANTAÇÃO (Movidapara o Admin) -->
+    <!-- BARRA DE CONFIGURAÇÃO (Agora apenas no Admin) -->
     <div class="config-bar">
-      <span style="color:#aaa;">API Atual:</span>
+      <span style="color:#aaa;">Atualizar Link da API:</span>
       <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycbwxRQ8kNqBUuFeLqSMYjGYOaYFsSX5UtOBXkYX3bvWPN04e22eHjfUEEHD45J6BqI3z/exec">
-      <button onclick="salvarNovoEndpoint()">Salvar</button>
+      <button onclick="salvarEndpointNaPlanilha()">Salvar no Banco de Dados</button>
     </div>
 
     <div class="admin-panel-content" id="listaUsuariosContainer">Carregando utilizadores...</div>
@@ -172,29 +172,34 @@
 
   <script>
     // ==========================================
-    // LINK DA NOVA IMPLANTAÇÃO GERADO NO APPS SCRIPT
-    const ENDPOINT_PADRAO = "https://script.google.com/macros/s/AKfycbwxRQ8kNqBUuFeLqSMYjGYOaYFsSX5UtOBXkYX3bvWPN04e22eHjfUEEHD45J6BqI3z/exec";
+    // SUBSTITUA PELO SEU LINK DO APPS SCRIPT
+    const URL_RAIZ_DO_SISTEMA = "https://script.google.com/macros/s/AKfycbyMPK1himwtPQ9Ek7kAix3kT_AGsTVOby-7jZRb7DfUSOcsQkTmM_p7HDC2t0HG6dS4/exec";
     // ==========================================
     
     function obterApiUrl() {
-      // Tenta pegar o salvo no dispositivo, se não existir usa a constante.
-      return localStorage.getItem("tut_ia_endpoint") || ENDPOINT_PADRAO;
+      // Retorna sempre a raiz para pedir o link fresco da planilha
+      return localStorage.getItem("tut_ia_endpoint") || URL_RAIZ_DO_SISTEMA;
     }
 
-    function salvarNovoEndpoint() {
-      let valor = document.getElementById("campoApiUrl").value.trim();
-      if (!valor) valor = ENDPOINT_PADRAO;
-      localStorage.setItem("tut_ia_endpoint", valor);
-      showModal("Configuração", "Endereço da API atualizado com sucesso no seu dispositivo!", "info");
-    }
-
-    // Função que garante que o link padrão seja o que está no código ao iniciar
-    function resetarEndpointSeVazio() {
-        if(!localStorage.getItem("tut_ia_endpoint")) {
-            document.getElementById("campoApiUrl").value = ENDPOINT_PADRAO;
-        } else {
-            document.getElementById("campoApiUrl").value = localStorage.getItem("tut_ia_endpoint");
-        }
+    // NOVA FUNÇÃO: Salva no dispositivo e envia para a planilha
+    function salvarEndpointNaPlanilha() {
+      let novoUrl = document.getElementById("campoApiUrl").value.trim();
+      if (!novoUrl) novoUrl = URL_RAIZ_DO_SISTEMA;
+      
+      // 1. Salva localmente
+      localStorage.setItem("tut_ia_endpoint", novoUrl);
+      
+      // 2. Envia para o servidor para guardar na aba Admin
+      showModal("Aguarde", "A guardar o novo URL na base de dados...", "info");
+      
+      fetch(`${novoUrl}?acao=salvarUrl&url=${encodeURIComponent(novoUrl)}`, fetchOptions)
+        .then(res => res.json())
+        .then(dados => {
+          showModal("Sucesso", dados.resultado, "alerta");
+        })
+        .catch(err => {
+          showModal("Aviso", "O URL foi atualizado no seu telemóvel, mas falhou a sincronização com a folha de cálculo.", "alerta");
+        });
     }
 
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
@@ -205,7 +210,6 @@
     let alunoLogado = null; 
     let isSpeaking = false; 
 
-    // --- DESTRAVA DE ÁUDIO NO SAFARI / IOS ---
     function destravarAudioIOS() {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.resume();
@@ -215,7 +219,6 @@
       }
     }
 
-    // --- SISTEMA DE POPUP MODERNO ---
     function showModal(titulo, mensagem, tipo, callbackConfirmar) {
       document.getElementById('modalTitle').textContent = titulo;
       document.getElementById('modalTitle').style.color = (tipo === 'erro' || tipo === 'deletar') ? '#ff1744' : '#00e676';
@@ -246,7 +249,6 @@
       closeModal();
     });
 
-    // --- GESTÃO DE TELAS E LOGIN ---
     function mudarTela(idTelaAlvo) {
       destravarAudioIOS();
       document.querySelectorAll('body > div:not(.modal-overlay)').forEach(el => el.classList.add('hidden'));
@@ -254,7 +256,18 @@
     }
 
     window.onload = function() {
-      resetarEndpointSeVazio();
+      // Quando a página carrega, vai perguntar à Planilha qual é o URL guardado na aba Admin
+      // Caso não consiga, usa o guardado no dispositivo.
+      fetch(`${URL_RAIZ_DO_SISTEMA}?acao=obterUrl`, fetchOptions)
+        .then(res => res.json())
+        .then(dados => {
+            if(dados.resultado && dados.resultado.startsWith("http")) {
+                localStorage.setItem("tut_ia_endpoint", dados.resultado);
+                let campoUrl = document.getElementById("campoApiUrl");
+                if(campoUrl) campoUrl.value = dados.resultado;
+            }
+        })
+        .catch(err => console.log("Usando endpoint guardado localmente."));
 
       let guardado = localStorage.getItem("tut_ia_aluno");
       if(guardado) {
@@ -306,7 +319,6 @@
       mudarTela('loginAlunoArea');
     }
 
-    // --- MÉTODOS DE COMUNICAÇÃO COM A IA COM RETRY AUTOMÁTICO ---
     function enviarParaIA(perguntaTexto, tentativa = 1) {
       if(!perguntaTexto) return;
       let materia = document.getElementById("materiaFoco").value || "Estudos Gerais";
@@ -323,7 +335,6 @@
         .then(dados => {
           let resposta = dados.resultado || "";
 
-          // Se detectar alta demanda, reenvia automaticamente até 3 vezes
           if (typeof resposta === "string" && (resposta.includes("experiencing high demand") || resposta.includes("503") || resposta.includes("demand"))) {
             if (tentativa <= 3) {
               document.getElementById('statusEscuta').textContent = `Servidor com alta demanda. Tentativa ${tentativa} de 3...`;
@@ -352,7 +363,6 @@
       if (event.key === "Enter") enviarPerguntaDigitada();
     }
 
-    // --- LÓGICA DE VOZ (Buffer contínuo + Correção de Duplicação Mobile) ---
     let timeoutFalar; 
     let textoAcumuladoCompleto = ""; 
 
@@ -374,8 +384,6 @@
           if (event.results[i].isFinal) {
             textoFinalSessao += " " + event.results[i][0].transcript;
           } else {
-            // CORREÇÃO PARA MOBILE: Usar "=" em vez de "+=" para evitar a 
-            // repetição do histórico da frase enviada pelo Android/iOS
             textoSessaoAtual = " " + event.results[i][0].transcript;
           }
         }
@@ -387,7 +395,6 @@
         
         clearTimeout(timeoutFalar);
         
-        // 4,5s de tolerância para enunciados longos e respiração
         timeoutFalar = setTimeout(() => {
           let fraseFinal = (textoAcumuladoCompleto + textoSessaoAtual).trim();
           if (fraseFinal !== "" && !isSpeaking) {
@@ -445,7 +452,6 @@
       }
     }
 
-    // --- SÍNTESE DE VOZ CALIBRADA PARA IOS / SAFARI ---
     function falar(texto) {
       if (!('speechSynthesis' in window)) return;
       
@@ -458,7 +464,6 @@
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
-      // Localização de voz em português
       let vozes = window.speechSynthesis.getVoices();
       if (vozes && vozes.length > 0) {
         let vozPt = vozes.find(v => v.lang === 'pt-BR' || v.lang === 'pt_BR' || v.lang.startsWith('pt'));
@@ -511,7 +516,6 @@
       }, 50);
     }
 
-    // --- FUNÇÕES ADMIN E CADASTRO ---
     function realizarCadastro() {
       let nome = document.getElementById("cadNome").value;
       let email = document.getElementById("cadEmail").value;
@@ -546,4 +550,31 @@
 
     function carregarUsuarios() {
       document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
-      fetch(`${obterApiUrl()}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document
+      fetch(`${obterApiUrl()}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document.getElementById("listaUsuariosContainer").innerHTML = "<h3>Usuários Cadastrados:</h3>" + dados.resultado; });
+    }
+
+    function excluirUsuario(email) {
+      showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
+        showModal("Aguarde", "Excluindo utilizador...", "info");
+        fetch(`${obterApiUrl()}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions).then(res => res.json()).then(dados => { showModal("Sucesso", dados.resultado, "alerta"); carregarUsuarios(); });
+      });
+    }
+
+    function agendarProva() {
+      let nome = document.getElementById("provaNome").value;
+      let data = document.getElementById("provaData").value;
+      let email = document.getElementById("userEmail").value;
+      if(!nome || !data || !email) { showModal("Atenção", "Preencha todos os dados da prova.", "alerta"); return; }
+
+      fetch(`${obterApiUrl()}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
+        .then(res => res.json())
+        .then(dados => {
+          showModal("Agenda", dados.resultado, "alerta");
+          mudarTela('appArea');
+          document.getElementById("provaNome").value = "";
+          document.getElementById("provaData").value = "";
+        });
+    }
+  </script>
+</body>
+</html>

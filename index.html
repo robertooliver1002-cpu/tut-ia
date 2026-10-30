@@ -8,10 +8,10 @@
     * { box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
     
-    /* Configuração rápida de Endpoint */
-    .config-bar { background: #1a1a1a; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; font-size: 12px; flex-shrink: 0; border: 1px solid #333; }
+    /* Configuração rápida de Endpoint - APENAS VISÍVEL NO ADMIN */
+    .config-bar { background: #1a1a1a; padding: 8px 12px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 8px; align-items: center; font-size: 12px; border: 1px solid #333; }
     .config-bar input { margin: 0; padding: 6px 10px; font-size: 12px; flex: 1; background: #252525; border: 1px solid #444; color: #00e676; border-radius: 6px; }
-    .config-bar button { width: auto; max-width: none; padding: 6px 14px; font-size: 12px; border-radius: 6px; background: #0078ff; color: #fff; box-shadow: none; }
+    .config-bar button { width: auto; max-width: none; padding: 6px 14px; font-size: 12px; border-radius: 6px; background: #0078ff; color: #fff; box-shadow: none; margin: 0; }
 
     /* Contentor do Chat: Trava a altura para forçar a barra de rolagem */
     #appArea:not(.hidden) { display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; overflow: hidden; }
@@ -64,13 +64,6 @@
   </style>
 </head>
 <body>
-
-  <!-- BARRA DE CONFIGURAÇÃO DE IMPLANTAÇÃO (Salva no dispositivo) -->
-  <div class="config-bar">
-    <span style="color:#aaa;">Versão 2.06 - API Atual:</span>
-    <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycbyMPK1himwtPQ9Ek7kAix3kT_AGsTVOby-7jZRb7DfUSOcsQkTmM_p7HDC2t0HG6dS4/exec">
-    <button onclick="salvarNovoEndpoint()">Salvar URL</button>
-  </div>
 
   <!-- TELA DE LOGIN DO ALUNO (Inicial) -->
   <div id="loginAlunoArea">
@@ -153,6 +146,14 @@
   <!-- TELA DO PAINEL ADMIN -->
   <div id="painelAdminArea" class="hidden">
     <h2 style="text-align:center; color: #ff9800;">Painel de Controle</h2>
+    
+    <!-- BARRA DE CONFIGURAÇÃO DE IMPLANTAÇÃO (Movidapara o Admin) -->
+    <div class="config-bar">
+      <span style="color:#aaa;">API Atual:</span>
+      <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycbwOc6Zj04HJnoJLPEb6JfklkRv3w2L_sn_jomm56X6REanCV6nZjplg-fv8U03lPjZK/exec">
+      <button onclick="salvarNovoEndpoint()">Salvar</button>
+    </div>
+
     <div class="admin-panel-content" id="listaUsuariosContainer">Carregando utilizadores...</div>
     <button onclick="mudarTela('loginAlunoArea')" class="secondary">Sair do Painel</button>
   </div>
@@ -171,12 +172,12 @@
 
   <script>
     // ==========================================
-    // COLE ABAIXO O SEU NOVO LINK DA NOVA IMPLANTAÇÃO GERADO NO APPS SCRIPT:
-    const ENDPOINT_PADRAO = "COLE_AQUI_O_NOVO_LINK_DA_NOVA_IMPLANTAÇÃO";
+    // LINK DA NOVA IMPLANTAÇÃO GERADO NO APPS SCRIPT
+    const ENDPOINT_PADRAO = "https://script.google.com/macros/s/AKfycbyMPK1himwtPQ9Ek7kAix3kT_AGsTVOby-7jZRb7DfUSOcsQkTmM_p7HDC2t0HG6dS4/exec";
     // ==========================================
     
     function obterApiUrl() {
-      // Tenta pegar o salvo. Se não existir, pega o padrão.
+      // Tenta pegar o salvo no dispositivo, se não existir usa a constante.
       return localStorage.getItem("tut_ia_endpoint") || ENDPOINT_PADRAO;
     }
 
@@ -184,14 +185,16 @@
       let valor = document.getElementById("campoApiUrl").value.trim();
       if (!valor) valor = ENDPOINT_PADRAO;
       localStorage.setItem("tut_ia_endpoint", valor);
-      showModal("Configuração", "Endereço da API atualizado com sucesso!", "info");
+      showModal("Configuração", "Endereço da API atualizado com sucesso no seu dispositivo!", "info");
     }
 
-    // Função auxiliar para forçar a limpeza do endpoint salvo quando houver problemas
-    function limparEndpointSalvo() {
-      localStorage.removeItem("tut_ia_endpoint");
-      document.getElementById("campoApiUrl").value = ENDPOINT_PADRAO;
-      console.log("Endpoint limpo, usando padrão.");
+    // Função que garante que o link padrão seja o que está no código ao iniciar
+    function resetarEndpointSeVazio() {
+        if(!localStorage.getItem("tut_ia_endpoint")) {
+            document.getElementById("campoApiUrl").value = ENDPOINT_PADRAO;
+        } else {
+            document.getElementById("campoApiUrl").value = localStorage.getItem("tut_ia_endpoint");
+        }
     }
 
     const fetchOptions = { method: 'GET', mode: 'cors', redirect: 'follow' }; 
@@ -251,9 +254,7 @@
     }
 
     window.onload = function() {
-      // Limpa qualquer endpoint salvo de versões anteriores para evitar erro no celular
-      limparEndpointSalvo();
-      document.getElementById("campoApiUrl").value = obterApiUrl();
+      resetarEndpointSeVazio();
 
       let guardado = localStorage.getItem("tut_ia_aluno");
       if(guardado) {
@@ -545,31 +546,4 @@
 
     function carregarUsuarios() {
       document.getElementById("listaUsuariosContainer").innerHTML = "Carregando...";
-      fetch(`${obterApiUrl()}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document.getElementById("listaUsuariosContainer").innerHTML = "<h3>Usuários Cadastrados:</h3>" + dados.resultado; });
-    }
-
-    function excluirUsuario(email) {
-      showModal("Excluir Usuário", `Tem a certeza que deseja excluir o utilizador com e-mail: ${email}?`, "deletar", function() {
-        showModal("Aguarde", "Excluindo utilizador...", "info");
-        fetch(`${obterApiUrl()}?acao=excluirUsuario&email=${encodeURIComponent(email)}`, fetchOptions).then(res => res.json()).then(dados => { showModal("Sucesso", dados.resultado, "alerta"); carregarUsuarios(); });
-      });
-    }
-
-    function agendarProva() {
-      let nome = document.getElementById("provaNome").value;
-      let data = document.getElementById("provaData").value;
-      let email = document.getElementById("userEmail").value;
-      if(!nome || !data || !email) { showModal("Atenção", "Preencha todos os dados da prova.", "alerta"); return; }
-
-      fetch(`${obterApiUrl()}?acao=agendar&nome=${encodeURIComponent(nome)}&data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`, fetchOptions)
-        .then(res => res.json())
-        .then(dados => {
-          showModal("Agenda", dados.resultado, "alerta");
-          mudarTela('appArea');
-          document.getElementById("provaNome").value = "";
-          document.getElementById("provaData").value = "";
-        });
-    }
-  </script>
-</body>
-</html>
+      fetch(`${obterApiUrl()}?acao=listarUsuarios`, fetchOptions).then(res => res.json()).then(dados => { document

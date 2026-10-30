@@ -172,12 +172,11 @@
 
   <script>
     // ==========================================
-    // SUBSTITUA PELO SEU LINK DO APPS SCRIPT
+    // SUBSTITUA PELO SEU LINK DO APPS SCRIPT NOVO
     const URL_RAIZ_DO_SISTEMA = "https://script.google.com/macros/s/AKfycbyMPK1himwtPQ9Ek7kAix3kT_AGsTVOby-7jZRb7DfUSOcsQkTmM_p7HDC2t0HG6dS4/exec";
     // ==========================================
     
     function obterApiUrl() {
-      // Retorna sempre a raiz para pedir o link fresco da planilha
       return localStorage.getItem("tut_ia_endpoint") || URL_RAIZ_DO_SISTEMA;
     }
 
@@ -186,10 +185,7 @@
       let novoUrl = document.getElementById("campoApiUrl").value.trim();
       if (!novoUrl) novoUrl = URL_RAIZ_DO_SISTEMA;
       
-      // 1. Salva localmente
       localStorage.setItem("tut_ia_endpoint", novoUrl);
-      
-      // 2. Envia para o servidor para guardar na aba Admin
       showModal("Aguarde", "A guardar o novo URL na base de dados...", "info");
       
       fetch(`${novoUrl}?acao=salvarUrl&url=${encodeURIComponent(novoUrl)}`, fetchOptions)
@@ -198,7 +194,7 @@
           showModal("Sucesso", dados.resultado, "alerta");
         })
         .catch(err => {
-          showModal("Aviso", "O URL foi atualizado no seu telemóvel, mas falhou a sincronização com a folha de cálculo.", "alerta");
+          showModal("Aviso", "O URL foi atualizado no seu dispositivo, mas falhou a sincronização com a folha de cálculo.", "alerta");
         });
     }
 
@@ -256,19 +252,6 @@
     }
 
     window.onload = function() {
-      // Quando a página carrega, vai perguntar à Planilha qual é o URL guardado na aba Admin
-      // Caso não consiga, usa o guardado no dispositivo.
-      fetch(`${URL_RAIZ_DO_SISTEMA}?acao=obterUrl`, fetchOptions)
-        .then(res => res.json())
-        .then(dados => {
-            if(dados.resultado && dados.resultado.startsWith("http")) {
-                localStorage.setItem("tut_ia_endpoint", dados.resultado);
-                let campoUrl = document.getElementById("campoApiUrl");
-                if(campoUrl) campoUrl.value = dados.resultado;
-            }
-        })
-        .catch(err => console.log("Usando endpoint guardado localmente."));
-
       let guardado = localStorage.getItem("tut_ia_aluno");
       if(guardado) {
         alunoLogado = JSON.parse(guardado);
@@ -300,8 +283,10 @@
             showModal("Acesso Negado", dados.resultado.mensagem, "erro");
           }
         }).catch(err => {
-          console.error("Erro detalhado no console:", err);
-          showModal("Erro", "Ocorreu um problema ao processar o seu login.", "erro");
+          console.error("Erro no login do aluno:", err);
+          // Auto-cura: Se der erro de rede, apaga o link antigo da memória
+          localStorage.removeItem("tut_ia_endpoint");
+          showModal("Erro", "Falha de conexão detetada. O sistema apagou o link antigo da memória. Por favor, tente Entrar novamente.", "erro");
         });
     }
 
@@ -530,7 +515,10 @@
         .then(dados => {
           showModal("Sucesso", dados.resultado, "alerta");
           mudarTela('loginAlunoArea'); 
-        }).catch(err => showModal("Erro", "Falha de comunicação.", "erro"));
+        }).catch(err => {
+          localStorage.removeItem("tut_ia_endpoint");
+          showModal("Erro", "Falha de comunicação. A memória de ligação foi limpa. Tente de novo.", "erro");
+        });
     }
 
     function entrarAdmin() {
@@ -545,7 +533,12 @@
           document.querySelector("#loginAdminArea button").textContent = "Acessar Painel";
           if(dados.resultado === true) { mudarTela('painelAdminArea'); carregarUsuarios(); } 
           else { showModal("Erro de Acesso", "Usuário ou senha incorretos!", "erro"); }
-        }).catch(err => { document.querySelector("#loginAdminArea button").textContent = "Acessar Painel"; showModal("Erro", "Falha.", "erro"); });
+        }).catch(err => { 
+          document.querySelector("#loginAdminArea button").textContent = "Acessar Painel"; 
+          // Auto-cura: Se der erro de rede, apaga o link antigo da memória
+          localStorage.removeItem("tut_ia_endpoint");
+          showModal("Erro", "Falha de conexão. O sistema limpou a memória de ligação antiga. Por favor, clique em Acessar Painel novamente.", "erro"); 
+        });
     }
 
     function carregarUsuarios() {

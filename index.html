@@ -391,6 +391,13 @@
       recognition.interimResults = true; 
       recognition.lang = 'pt-BR';
 
+      // 1. Confirmação real: só atualiza a tela quando o microfone liga de facto
+      recognition.onstart = function() {
+        if (isListening && !isSpeaking) {
+          document.getElementById('statusEscuta').textContent = "Pode falar, a escutar...";
+        }
+      };
+
       recognition.onresult = function(event) {
         if (isSpeaking) return;
 
@@ -415,7 +422,7 @@
         timeoutFalar = setTimeout(() => {
           let fraseFinal = (textoAcumuladoCompleto + textoSessaoAtual).trim();
           if (fraseFinal !== "" && !isSpeaking) {
-            document.getElementById('statusEscuta').textContent = ""; 
+            document.getElementById('statusEscuta').textContent = "A processar pergunta..."; 
             enviarParaIA(fraseFinal); 
             textoAcumuladoCompleto = ""; 
             try { recognition.stop(); } catch(e) {}
@@ -423,15 +430,29 @@
         }, 4500);
       };
       
+      // 2. Erro / Corte: liberta os botões se o telemóvel forçar o fecho do microfone
       recognition.onerror = function(event) { 
         if (event.error !== 'aborted' && event.error !== 'no-speech') {
-          document.getElementById('statusEscuta').textContent = "Erro: " + event.error; 
+          console.log("Erro de microfone:", event.error);
+          document.getElementById('statusEscuta').textContent = "Microfone em repouso. Toque no 🎤 para religar."; 
+          isListening = false;
+          let btn = document.getElementById("btnListen");
+          btn.innerHTML = "🎤";
+          btn.classList.remove("listening");
+          document.getElementById("botoesExtras").classList.remove("hidden"); 
+          document.getElementById("textoPergunta").disabled = false;
+          document.querySelector(".btn-enviar").disabled = false;
         }
       };
       
+      // 3. Segurança no loop: Atraso de 300ms antes de reiniciar a escuta
       recognition.onend = function() { 
         if (isListening && !isSpeaking) {
-          try { recognition.start(); } catch(e) {}
+          setTimeout(() => {
+            if (isListening && !isSpeaking) {
+              try { recognition.start(); } catch(e) {}
+            }
+          }, 300);
         }
       };
     } else {
@@ -447,17 +468,18 @@
 
       if (!isListening) {
         textoAcumuladoCompleto = "";
+        isListening = true;
+        document.getElementById('statusEscuta').textContent = "A iniciar microfone...";
         try { recognition.start(); } catch(e) {}
         btn.innerHTML = "🔴";
         btn.classList.add("listening");
         botoesExtras.classList.add("hidden"); 
         inputTexto.disabled = true; 
         btnEnviar.disabled = true;
-        document.getElementById('statusEscuta').textContent = "Pode ler seu enunciado, a escutar...";
-        isListening = true;
       } else {
         clearTimeout(timeoutFalar);
         textoAcumuladoCompleto = "";
+        isListening = false;
         try { recognition.stop(); } catch(e) {}
         btn.innerHTML = "🎤";
         btn.classList.remove("listening");
@@ -465,7 +487,6 @@
         inputTexto.disabled = false;
         btnEnviar.disabled = false;
         document.getElementById('statusEscuta').textContent = "";
-        isListening = false;
       }
     }
 
@@ -499,7 +520,6 @@
         if (isListening && recognition) {
           setTimeout(() => {
             try { recognition.start(); } catch(e) {}
-            document.getElementById('statusEscuta').textContent = "Pronto para a próxima questão, a escutar...";
           }, 400);
         }
       };

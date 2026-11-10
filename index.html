@@ -150,7 +150,7 @@
     <!-- BARRA DE CONFIGURAÇÃO (Agora apenas no Admin) -->
     <div class="config-bar">
       <span style="color:#aaa;">Atualizar Link da API:</span>
-      <input type="text" id="campoApiUrl" placeholder="https://script.google.com/macros/s/AKfycbwBsGw05NUtnR6xwq-2b6b6yfzSCrS2J3hPs9NGLP41aOI7UF8_qPoLgxTLwDaUOKIk/exec">
+      <input type="text" id="campoApiUrl" placeholder="Cole o novo URL da implantação aqui...">
       <button onclick="salvarEndpointNaPlanilha()">Salvar no Banco de Dados</button>
     </div>
 
@@ -173,7 +173,7 @@
   <script>
     // ==========================================
     // SUBSTITUA PELO SEU LINK DO APPS SCRIPT NOVO
-    const URL_RAIZ_DO_SISTEMA = "https://script.google.com/macros/s/AKfycbwBsGw05NUtnR6xwq-2b6b6yfzSCrS2J3hPs9NGLP41aOI7UF8_qPoLgxTLwDaUOKIk/exec";
+    const URL_RAIZ_DO_SISTEMA = "https://script.google.com/macros/s/AKfycbyMPK1himwtPQ9Ek7kAix3kT_AGsTVOby-7jZRb7DfUSOcsQkTmM_p7HDC2t0HG6dS4/exec";
     // ==========================================
     
     function obterApiUrl() {
@@ -206,7 +206,27 @@
     let alunoLogado = null; 
     let isSpeaking = false; 
 
+    // --- SISTEMA ANTI-BLOQUEIO DE ECRÃ (WAKE LOCK) ---
+    let wakeLock = null;
+    async function manterEcraAcordado() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+        } catch (err) {
+          console.log('Erro ao manter ecrã ligado:', err);
+        }
+      }
+    }
+    
+    document.addEventListener('visibilitychange', () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        manterEcraAcordado();
+      }
+    });
+
     function destravarAudioIOS() {
+      manterEcraAcordado();
+      
       if ('speechSynthesis' in window) {
         window.speechSynthesis.resume();
         let falaSilenciosa = new SpeechSynthesisUtterance('');
@@ -252,6 +272,17 @@
     }
 
     window.onload = function() {
+      fetch(`${URL_RAIZ_DO_SISTEMA}?acao=obterUrl`, fetchOptions)
+        .then(res => res.json())
+        .then(dados => {
+            if(dados.resultado && dados.resultado.startsWith("http")) {
+                localStorage.setItem("tut_ia_endpoint", dados.resultado);
+                let campoUrl = document.getElementById("campoApiUrl");
+                if(campoUrl) campoUrl.value = dados.resultado;
+            }
+        })
+        .catch(err => console.log("Usando endpoint guardado localmente."));
+
       let guardado = localStorage.getItem("tut_ia_aluno");
       if(guardado) {
         alunoLogado = JSON.parse(guardado);
@@ -284,7 +315,6 @@
           }
         }).catch(err => {
           console.error("Erro no login do aluno:", err);
-          // Auto-cura: Se der erro de rede, apaga o link antigo da memória
           localStorage.removeItem("tut_ia_endpoint");
           showModal("Erro", "Falha de conexão detetada. O sistema apagou o link antigo da memória. Por favor, tente Entrar novamente.", "erro");
         });
@@ -294,6 +324,7 @@
       mudarTela('appArea');
       document.getElementById("nomeAlunoDisplay").textContent = "Olá, " + alunoLogado.nome + "!";
       document.getElementById("userEmail").value = alunoLogado.email; 
+      manterEcraAcordado();
     }
 
     function fazerLogout() {
@@ -301,6 +332,7 @@
       alunoLogado = null;
       document.getElementById("loginEmail").value = "";
       document.getElementById("loginSenha").value = "";
+      if(wakeLock !== null) { wakeLock.release(); wakeLock = null; }
       mudarTela('loginAlunoArea');
     }
 
@@ -535,7 +567,6 @@
           else { showModal("Erro de Acesso", "Usuário ou senha incorretos!", "erro"); }
         }).catch(err => { 
           document.querySelector("#loginAdminArea button").textContent = "Acessar Painel"; 
-          // Auto-cura: Se der erro de rede, apaga o link antigo da memória
           localStorage.removeItem("tut_ia_endpoint");
           showModal("Erro", "Falha de conexão. O sistema limpou a memória de ligação antiga. Por favor, clique em Acessar Painel novamente.", "erro"); 
         });
